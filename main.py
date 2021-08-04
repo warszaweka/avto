@@ -20,12 +20,12 @@ webhook_token = os.getenv("WEBHOOK_TOKEN")
 redis_url = os.getenv("REDIS_URL")
 
 flask = Flask(__name__)
-flask.logger.info("MAIN")  # debug
+print("MAIN")  # debug
 
 
 @flask.route(f"/{webhook_token}")
 def flask_handler():
-    flask.logger.info("FLASK")  # debug
+    print("FLASK")  # debug
     update = Update.de_json(request.get_json(), bot)
     Queue("default", connection=from_url(redis_url)).enqueue(
         redis_handler, update
@@ -33,7 +33,7 @@ def flask_handler():
 
 
 def redis_handler(update: Update):
-    flask.logger.info("FLASK")  # debug
+    print("REDIS")  # debug
     if hasattr(update, "message") and hasattr(update.message, "text"):
         reply_text = update.message.text
         bot.send_message(update.message.chat.id, f"TEST: {reply_text}")
