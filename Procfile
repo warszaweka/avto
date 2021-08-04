@@ -1,2 +1,2 @@
-web: gunicorn --access-logfile - --log-file - --capture-output main:flask
+web: gunicorn main:flask
 worker: python worker.py

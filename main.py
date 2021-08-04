@@ -23,7 +23,7 @@ flask = Flask(__name__)
 print("MAIN")  # debug
 
 
-@flask.route(f"/{webhook_token}")
+@flask.route(f"/{webhook_token}", methods=["POST"])
 def flask_handler():
     print("FLASK")  # debug
     update = Update.de_json(request.get_json(), bot)
