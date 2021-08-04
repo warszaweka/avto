@@ -14,7 +14,7 @@ engine = create_engine(database_url, future=True)
 
 webhook_token = os.getenv("WEBHOOK_TOKEN")
 
-redis_url = os.getenv("REDISTOGO_URL")
+redis_url = os.getenv("REDIS_URL")
 
 flask = Flask(__name__)
 
