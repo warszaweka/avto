@@ -1,7 +1,8 @@
-import os
+from os import getenv
 
-import redis
-from rq import Connection, Queue, Worker
+from rq import Connection, Worker
 
-with Connection(redis.from_url(os.getenv("REDIS_URL"))):
+from redis import from_url
+
+with Connection(from_url(getenv("REDIS_URL"))):
     Worker("default").work()
