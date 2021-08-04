@@ -8,6 +8,8 @@ sqlalchemy = "*"
 psycopg2 = "*"
 flask = "*"
 gunicorn = "*"
+python-telegram-bot-raw = "*"
+rq = "*"
 
 [dev-packages]
 
