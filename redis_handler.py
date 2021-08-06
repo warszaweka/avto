@@ -18,6 +18,7 @@ def redis_handler(db, token, admins, json):
         user_id = update.message.from_user.id
     else:
         return
+    print(admins, user_id)  # debug
     engine = create_engine(db, future=True)
     Base.metadata.create_all(engine)
     with Session(engine) as session:
