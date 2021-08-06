@@ -14,7 +14,7 @@ def change_state(engine, user_id, state_id, state_args):
 
 
 def route_callback(engine, bot, admin, state_args, update, handler):
-    if not (update.callback_query.data is not None):
+    if update.callback_query.data is None:
         return
     new_state_id, new_state_args = handler(
         engine,
