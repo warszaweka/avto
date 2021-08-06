@@ -38,7 +38,7 @@ def route_callback(engine, bot, admin, state_args, update, handler):
     change_state(engine, user_id, new_state_id, new_state_args)
 
 
-def start_handler(engine, bot, admin, state_args, update):
+def start_handler(engine, bot, admin, update):
     if update.message.text != "/start":
         return
     main_show(bot, update.message.chat.id)

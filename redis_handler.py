@@ -33,11 +33,12 @@ def redis_handler(db, token, admins, json):
             state_handlers = get_state_handlers_callback()
         else:
             state_handlers = get_state_handlers_message()
-        if state_id in state_handlers:
+        if state_id not in state_handlers:
             return
-        telegram_handler = state_handlers[state_id]
+        state_handlers[state_id](
+            engine, bot, user_id in admins, state_args, update
+        )
     elif not callback:
-        telegram_handler = start_handler
+        start_handler(engine, bot, user_id in admins, update)
     else:
         return
-    telegram_handler(engine, bot, user_id in admins, state_args, update)
