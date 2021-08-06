@@ -16,6 +16,6 @@ def start_handler(bot, engine, update):
             user_id = update.message.from_user.id
         with Session(engine) as session:
             session.add(
-                User(user_id=user_id, state_id=main_id, state_args=None)
+                User(id=user_id, state_id=main_id, state_args=None)
             )
             session.commit()
