@@ -10,10 +10,10 @@ from states import (get_state_handlers_callback, get_state_handlers_message,
 def redis_handler(db, token, admins, json):
     bot = Bot(token)
     update = Update.de_json(json, bot)
-    if hasattr(update, "callback_query"):
+    if update.callback_query is not None:
         callback = True
         user_id = update.callback_query.from_user.id
-    elif hasattr(update, "message") and hasattr(update.message, "from_user"):
+    elif update.message is not None:
         callback = False
         user_id = update.message.from_user.id
     else:

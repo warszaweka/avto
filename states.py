@@ -14,10 +14,7 @@ def change_state(engine, user_id, state_id, state_args):
 
 
 def route_callback(engine, bot, admin, state_args, update, handler):
-    if not (
-        hasattr(update.callback_query, "data")
-        and hasattr(update.callback_query, "message")
-    ):
+    if not (update.callback_query.data is not None):
         return
     new_state_id, new_state_args = handler(
         engine,
@@ -42,9 +39,7 @@ def route_callback(engine, bot, admin, state_args, update, handler):
 
 
 def start_handler(engine, bot, admin, state_args, update):
-    if not (
-        hasattr(update.message, "text") and update.message.text == "/start"
-    ):
+    if update.message.text != "/start":
         return
     main_show(bot, update.message.chat.id)
     with Session(engine) as session:
