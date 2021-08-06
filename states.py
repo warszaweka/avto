@@ -41,11 +41,12 @@ def route_callback(engine, bot, admin, state_args, update, handler):
 def start_handler(engine, bot, admin, update):
     if update.message.text != "/start":
         return
-    main_show(bot, update.message.chat.id)
+    user_id = update.message.from_user.id
+    main_show(engine, bot, update.message.chat.id, user_id, admin, None)
     with Session(engine) as session:
         session.add(
             User(
-                id=update.message.from_user.id,
+                id=user_id,
                 state_id=main_id,
                 state_args=None,
             )
