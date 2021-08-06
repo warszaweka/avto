@@ -73,7 +73,7 @@ def get_state_shows():
     return {
         main_id: main_show,
         news_id: news_show,
-        create_id: create_article_show,
+        create_article_id: create_article_show,
         ars_id: ars_show,
         auction_id: auction_show,
         diller_id: diller_show,
