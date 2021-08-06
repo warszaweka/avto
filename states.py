@@ -1,89 +1,140 @@
 from sqlalchemy.orm import Session
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from ujson import dumps, loads
 
 from models import User
+
+
+def change_state(engine, user_id, state_id, state_args):
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        user.state_id = state_id
+        user.state_args = state_args
+        session.commit()
+
+
+def route_callback(engine, bot, admin, state_args, update, handler):
+    if not (
+        hasattr(update.callback_query, "data")
+        and hasattr(update.callback_query, "message")
+    ):
+        return
+    new_state_id, new_state_args = handler(
+        engine,
+        bot,
+        admin,
+        state_args,
+        update,
+        loads(update.callback_query.data),
+    )
+    if new_state_id is None:
+        return
+    user_id = update.callback_query.from_user.id
+    get_state_shows()[new_state_id](
+        engine,
+        bot,
+        update.callback_query.message.chat.id,
+        user_id,
+        admin,
+        new_state_args,
+    )
+    change_state(engine, user_id, new_state_id, new_state_args)
+
+
+def start_handler(engine, bot, admin, state_args, update):
+    if not (
+        hasattr(update.message, "text") and update.message.text == "/start"
+    ):
+        return
+    main_show(bot, update.message.chat.id)
+    with Session(engine) as session:
+        session.add(
+            User(
+                id=update.message.from_user.id,
+                state_id=main_id,
+                state_args=None,
+            )
+        )
+        session.commit()
+
+
+def get_state_handlers_message():
+    return {}
+
+
+def get_state_handlers_callback():
+    return {
+        main_id: main_handler_callback,
+        news_id: news_handler_callback,
+        ars_id: ars_handler_callback,
+        auction_id: auction_handler_callback,
+        diller_id: diller_handler_callback,
+        client_id: client_handler_callback,
+    }
+
+
+def get_state_shows():
+    return {
+        main_id: main_show,
+        news_id: news_show,
+        ars_id: ars_show,
+        auction_id: auction_show,
+        diller_id: diller_show,
+        client_id: client_show,
+    }
+
 
 main_id = "main"
 
 
-def main_handle(bot, engine, update: Update):
-    if hasattr(update, "callback_query") and hasattr(
-        update.callback_query, "data"
-    ):
-        data = update.callback_query.data
-        if data == news_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            news_show(bot, chat_id)
+def main_handler_callback(engine, bot, admin, state_args, update):
+    def handler(engine, bot, admin, state_args, update, data):
+        new_state_id = data["state_id"]
+        if new_state_id not in {
+            news_id,
+            ars_id,
+            auction_id,
+            diller_id,
+            client_id,
+        }:
+            return (None, None)
+        return (new_state_id, None)
 
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = news_id
-                user.state_args = None
-                session.commit()
-        elif data == ars_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            ars_show(bot, chat_id)
-
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = ars_id
-                user.state_args = None
-                session.commit()
-        elif data == auction_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            auction_show(bot, chat_id)
-
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = auction_id
-                user.state_args = None
-                session.commit()
-        elif data == diller_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            diller_show(bot, chat_id)
-
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = diller_id
-                user.state_args = None
-                session.commit()
-        elif data == client_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            client_show(bot, chat_id)
-
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = client_id
-                user.state_args = None
-                session.commit()
+    route_callback(engine, bot, admin, state_args, update, handler)
 
 
-def main_show(bot: Bot, chat_id):
+def main_show(engine, bot, chat_id, user_id, admin, new_state_args):
     bot.send_message(
         chat_id,
         "Главное меню",
         reply_markup=InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton("Новости", callback_data=news_id)],
-                [InlineKeyboardButton("СТО", callback_data=ars_id)],
                 [
                     InlineKeyboardButton(
-                        "Аукцион заявок", callback_data=auction_id
+                        "Новости", callback_data=dumps({"state_id": news_id})
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        "Кабинет диллера", callback_data=diller_id
+                        "СТО", callback_data=dumps({"state_id": ars_id})
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        "Кабинет клиента", callback_data=client_id
+                        "Аукцион заявок",
+                        callback_data=dumps({"state_id": auction_id}),
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Кабинет диллера",
+                        callback_data=dumps({"state_id": diller_id}),
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Кабинет клиента",
+                        callback_data=dumps({"state_id": client_id}),
                     )
                 ],
             ]
@@ -94,29 +145,29 @@ def main_show(bot: Bot, chat_id):
 news_id = "news"
 
 
-def news_handle(bot: Bot, engine, update: Update):
-    if hasattr(update, "callback_query") and hasattr(
-        update.callback_query, "data"
-    ):
-        data = update.callback_query.data
-        if data == main_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            main_show(bot, chat_id)
+def news_handler_callback(engine, bot, admin, state_args, update):
+    def handler(engine, bot, admin, state_args, update, data):
+        new_state_id = data["state_id"]
+        if new_state_id != main_id:
+            return (None, None)
+        return (new_state_id, None)
 
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = main_id
-                user.state_args = None
-                session.commit()
+    route_callback(engine, bot, admin, state_args, update, handler)
 
 
-def news_show(bot: Bot, chat_id: int):
+def news_show(engine, bot, chat_id, user_id, admin, new_state_args):
     bot.send_message(
         chat_id,
         "Новости",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
+            [
+                [
+                    InlineKeyboardButton(
+                        "Главное меню",
+                        callback_data=dumps({"state_id": main_id}),
+                    )
+                ]
+            ]
         ),
     )
 
@@ -124,29 +175,29 @@ def news_show(bot: Bot, chat_id: int):
 ars_id = "ars"
 
 
-def ars_handle(bot: Bot, engine, update: Update):
-    if hasattr(update, "callback_query") and hasattr(
-        update.callback_query, "data"
-    ):
-        data = update.callback_query.data
-        if data == main_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            main_show(bot, chat_id)
+def ars_handler_callback(engine, bot, admin, state_args, update):
+    def handler(engine, bot, admin, state_args, update, data):
+        new_state_id = data["state_id"]
+        if new_state_id != main_id:
+            return (None, None)
+        return (new_state_id, None)
 
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = main_id
-                user.state_args = None
-                session.commit()
+    route_callback(engine, bot, admin, state_args, update, handler)
 
 
-def ars_show(bot: Bot, chat_id: int):
+def ars_show(engine, bot, chat_id, user_id, admin, new_state_args):
     bot.send_message(
         chat_id,
         "СТО",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
+            [
+                [
+                    InlineKeyboardButton(
+                        "Главное меню",
+                        callback_data=dumps({"state_id": main_id}),
+                    )
+                ]
+            ]
         ),
     )
 
@@ -154,29 +205,29 @@ def ars_show(bot: Bot, chat_id: int):
 auction_id = "auction"
 
 
-def auction_handle(bot: Bot, engine, update: Update):
-    if hasattr(update, "callback_query") and hasattr(
-        update.callback_query, "data"
-    ):
-        data = update.callback_query.data
-        if data == main_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            main_show(bot, chat_id)
+def auction_handler_callback(engine, bot, admin, state_args, update):
+    def handler(engine, bot, admin, state_args, update, data):
+        new_state_id = data["state_id"]
+        if new_state_id != main_id:
+            return (None, None)
+        return (new_state_id, None)
 
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = main_id
-                user.state_args = None
-                session.commit()
+    route_callback(engine, bot, admin, state_args, update, handler)
 
 
-def auction_show(bot: Bot, chat_id: int):
+def auction_show(engine, bot, chat_id, user_id, admin, new_state_args):
     bot.send_message(
         chat_id,
         "Аукцион заявок",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
+            [
+                [
+                    InlineKeyboardButton(
+                        "Главное меню",
+                        callback_data=dumps({"state_id": main_id}),
+                    )
+                ]
+            ]
         ),
     )
 
@@ -184,29 +235,29 @@ def auction_show(bot: Bot, chat_id: int):
 diller_id = "diller"
 
 
-def diller_handle(bot: Bot, engine, update: Update):
-    if hasattr(update, "callback_query") and hasattr(
-        update.callback_query, "data"
-    ):
-        data = update.callback_query.data
-        if data == main_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            main_show(bot, chat_id)
+def diller_handler_callback(engine, bot, admin, state_args, update):
+    def handler(engine, bot, admin, state_args, update, data):
+        new_state_id = data["state_id"]
+        if new_state_id != main_id:
+            return (None, None)
+        return (new_state_id, None)
 
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = main_id
-                user.state_args = None
-                session.commit()
+    route_callback(engine, bot, admin, state_args, update, handler)
 
 
-def diller_show(bot: Bot, chat_id: int):
+def diller_show(engine, bot, chat_id, user_id, admin, new_state_args):
     bot.send_message(
         chat_id,
         "Кабинет диллера",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
+            [
+                [
+                    InlineKeyboardButton(
+                        "Главное меню",
+                        callback_data=dumps({"state_id": main_id}),
+                    )
+                ]
+            ]
         ),
     )
 
@@ -214,38 +265,28 @@ def diller_show(bot: Bot, chat_id: int):
 client_id = "client"
 
 
-def client_handle(bot: Bot, engine, update: Update):
-    if hasattr(update, "callback_query") and hasattr(
-        update.callback_query, "data"
-    ):
-        data = update.callback_query.data
-        if data == main_id:
-            if hasattr(update.callback_query, "message"):
-                chat_id = update.callback_query.message.chat.id
-            main_show(bot, chat_id)
+def client_handler_callback(engine, bot, admin, state_args, update):
+    def handler(engine, bot, admin, state_args, update, data):
+        new_state_id = data["state_id"]
+        if new_state_id != main_id:
+            return (None, None)
+        return (new_state_id, None)
 
-            with Session(engine) as session:
-                user = session.get(User, update.callback_query.from_user.id)
-                user.state_id = main_id
-                user.state_args = None
-                session.commit()
+    route_callback(engine, bot, admin, state_args, update, handler)
 
 
-def client_show(bot: Bot, chat_id: int):
+def client_show(engine, bot, chat_id, user_id, admin, new_state_args):
     bot.send_message(
         chat_id,
         "Кабинет клиента",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
+            [
+                [
+                    InlineKeyboardButton(
+                        "Главное меню",
+                        callback_data=dumps({"state_id": main_id}),
+                    )
+                ]
+            ]
         ),
     )
-
-
-state_handlers = {
-    main_id: main_handle,
-    news_id: news_handle,
-    ars_id: ars_handle,
-    auction_id: auction_handle,
-    diller_id: diller_handle,
-    client_id: client_handle,
-}

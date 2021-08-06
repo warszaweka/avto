@@ -7,7 +7,6 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "state"
-
     id = Column(Integer, primary_key=True)
     state_id = Column(String(64), nullable=False)
     state_args = Column(JSON)
