@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from ujson import dumps, loads
 
 from models import User
