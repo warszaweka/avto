@@ -115,7 +115,7 @@ def news_show(bot: Bot, chat_id: int):
     bot.send_message(
         chat_id,
         "Новости",
-        InlineKeyboardMarkup(
+        reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
         ),
     )
@@ -145,7 +145,7 @@ def ars_show(bot: Bot, chat_id: int):
     bot.send_message(
         chat_id,
         "СТО",
-        InlineKeyboardMarkup(
+        reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
         ),
     )
@@ -175,7 +175,7 @@ def auction_show(bot: Bot, chat_id: int):
     bot.send_message(
         chat_id,
         "Аукцион заявок",
-        InlineKeyboardMarkup(
+        reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
         ),
     )
@@ -205,7 +205,7 @@ def diller_show(bot: Bot, chat_id: int):
     bot.send_message(
         chat_id,
         "Кабинет диллера",
-        InlineKeyboardMarkup(
+        reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
         ),
     )
@@ -235,7 +235,7 @@ def client_show(bot: Bot, chat_id: int):
     bot.send_message(
         chat_id,
         "Кабинет клиента",
-        InlineKeyboardMarkup(
+        reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Главное меню", callback_data=main_id)]]
         ),
     )
