@@ -10,7 +10,7 @@ db = getenv("DATABASE_URL")
 if db.startswith("postgres://"):
     db = db.replace("postgres://", "postgresql+psycopg2://", 1)
 token = getenv("API_TOKEN")
-admins = getenv("ADMINS").split(";")
+admins = list(map(int, getenv("ADMINS").split(";")))
 redis = getenv("REDIS_URL")
 flask = Flask(__name__)
 

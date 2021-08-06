@@ -18,7 +18,6 @@ def redis_handler(db, token, admins, json):
         user_id = update.message.from_user.id
     else:
         return
-    print(admins, user_id)  # debug
     engine = create_engine(db, future=True)
     Base.metadata.create_all(engine)
     with Session(engine) as session:
@@ -29,6 +28,7 @@ def redis_handler(db, token, admins, json):
             user_exists = True
             state_id = user.state_id
             state_args = user.state_args
+    admin = user_id in admins
     if user_exists:
         if callback:
             state_handlers = get_state_handlers_callback()
@@ -37,9 +37,9 @@ def redis_handler(db, token, admins, json):
         if state_id not in state_handlers:
             return
         state_handlers[state_id](
-            engine, bot, user_id in admins, state_args, update
+            engine, bot, admin, state_args, update
         )
     elif not callback:
-        start_handler(engine, bot, user_id in admins, update)
+        start_handler(engine, bot, admin, update)
     else:
         return
