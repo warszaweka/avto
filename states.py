@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from ujson import dumps, loads
 
-from models import User
+from models import Article, User
 
 
 def change_state(engine, user_id, state_id, state_args):
@@ -55,7 +55,7 @@ def start_handler(engine, bot, admin, update):
 
 
 def get_state_handlers_message():
-    return {}
+    return {create_article_id: create_article_handler_message}
 
 
 def get_state_handlers_callback():
@@ -73,6 +73,7 @@ def get_state_shows():
     return {
         main_id: main_show,
         news_id: news_show,
+        create_id: create_article_show,
         ars_id: ars_show,
         auction_id: auction_show,
         diller_id: diller_show,
@@ -144,9 +145,11 @@ news_id = "news"
 def news_handler_callback(engine, bot, admin, state_args, update):
     def handler(engine, bot, admin, state_args, update, data):
         new_state_id = data["state_id"]
-        if new_state_id != main_id:
-            return (None, None)
-        return (new_state_id, None)
+        if new_state_id == main_id:
+            return (new_state_id, None)
+        elif new_state_id == create_article_id and admin:
+            return (create_article_id, None)
+        return (None, None)
 
     route_callback(engine, bot, admin, state_args, update, handler)
 
@@ -155,17 +158,67 @@ def news_show(engine, bot, chat_id, user_id, admin, new_state_args):
     bot.send_message(
         chat_id,
         "Новости",
-        reply_markup=InlineKeyboardMarkup(
-            [
+        reply_markup=(
+            InlineKeyboardMarkup(
                 [
-                    InlineKeyboardButton(
-                        "Главное меню",
-                        callback_data=dumps({"state_id": main_id}),
-                    )
+                    [
+                        InlineKeyboardButton(
+                            "Создать новость",
+                            callback_data=dumps(
+                                {"state_id": create_article_id}
+                            ),
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "Главное меню",
+                            callback_data=dumps({"state_id": main_id}),
+                        )
+                    ],
                 ]
-            ]
+            )
+            if admin
+            else InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "Главное меню",
+                            callback_data=dumps({"state_id": main_id}),
+                        )
+                    ]
+                ]
+            )
         ),
     )
+    with Session(engine) as session:
+        for article in session.query(Article).all():
+            bot.send_message(chat_id, str(type(article)))
+        session.commit()
+
+
+create_article_id = "create_article"
+
+
+def create_article_handler_message(engine, bot, admin, state_args, update):
+    if update.message.text is None:
+        return
+    with Session(engine) as session:
+        session.add(Article(text=update.message.text))
+        session.commit()
+    user_id = update.message.from_user.id
+    news_show(
+        engine,
+        bot,
+        update.message.chat.id,
+        user_id,
+        admin,
+        None,
+    )
+    change_state(engine, user_id, news_id, None)
+
+
+def create_article_show(engine, bot, chat_id, user_id, admin, new_state_args):
+    bot.send_message(chat_id, "Введте статью")
 
 
 ars_id = "ars"
