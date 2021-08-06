@@ -204,12 +204,12 @@ def news_show(engine, bot, chat_id, user_id, admin, new_state_args):
     news = []
     with Session(engine) as session:
         for article in session.query(Article).all():
-            news.append(article.text)
+            news.append({"text": article.text, "id": article.id})
         session.commit()
     for article in news:
         bot.send_message(
             chat_id,
-            article,
+            article["text"],
             reply_markup=(
                 InlineKeyboardMarkup(
                     [
@@ -219,7 +219,7 @@ def news_show(engine, bot, chat_id, user_id, admin, new_state_args):
                                 callback_data=dumps(
                                     {
                                         "state_id": "delete_article",
-                                        "article_id": article.id,
+                                        "article_id": article["id"],
                                     }
                                 ),
                             )
