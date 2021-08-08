@@ -38,7 +38,7 @@ def flask_handler() -> tuple:
 
 def tg_handler(data: bytes) -> None:
     data: dict = loads(data)
-    print(data)
+    print(dumps(data, indent=2))
     # if update.callback_query is not None:
         # callback = True
         # user_id = update.callback_query.from_user.id
