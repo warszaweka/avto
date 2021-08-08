@@ -1,18 +1,21 @@
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.schema import Column
 from sqlalchemy.types import JSON, Integer, String, UnicodeText
 
-Base = declarative_base()
+DeclarativeBase: DeclarativeMeta = declarative_base()
 
 
-class User(Base):
-    __tablename__ = "state"
-    id = Column(Integer, primary_key=True)
-    state_id = Column(String(64), nullable=False)
-    state_args = Column(JSON)
+class User(DeclarativeBase):
+    __tablename__: str = "state"
+
+    id: Column = Column(Integer, primary_key=True)
+    state_id: Column = Column(String(64), nullable=False)
+    state_args: Column = Column(JSON, nullable=False)
 
 
-class Article(Base):
-    __tablename__ = "article"
-    id = Column(Integer, primary_key=True)
-    text = Column(UnicodeText)
+class Article(DeclarativeBase):
+    __tablename__: str = "article"
+
+    id: Column = Column(Integer, primary_key=True)
+    text: Column = Column(UnicodeText, nullable=False)

@@ -1,31 +1,65 @@
 from sqlalchemy.orm import Session
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from ujson import dumps, loads
 
 from models import Article, User
 
 
-def change_state(engine, user_id, state_id, state_args):
+def get_user_id(update: Update) -> int:
+    if update.callback_query is not None:
+        return update.callback_query.from_user.id
+    elif update.message is not None:
+        message = update.message
+        if message.from_user is not None:
+            return message.from_user.id
+    raise Exception()
+
+
+def change_state(engine, bot, admin, update, new_state_id, new_state_args):
+    user_id = get_user_id(update)
+    get_state_shows()[new_state_id](engine, bot, admin, update, new_state_args)
     with Session(engine) as session:
         user = session.get(User, user_id)
-        user.state_id = state_id
-        user.state_args = state_args
+        if user is not None:
+            user.state_id = new_state_id
+        user.state_args = new_state_args
         session.commit()
 
 
-def route_callback(engine, bot, admin, state_args, update, handler):
+def get_current_state_args(engine, update):
+    user_id = get_user_id(update)
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        if user is not None:
+            user_exists = False
+            current_state_args = user.state_args
+        else:
+            current_state_args = None
+        session.commit()
+    if current_state_args is not None:
+        return current_state_args
+    raise Exception()
+
+
+def handle(engine, bot, admin, state_args, update, handler):
     if update.callback_query.data is None:
         return
-    new_state_id, new_state_args = handler(
+    data = loads(update.callback_query.data)
+    if "state_id" not in data or "args" not in data:
+        return
+    new_state_id = data["state_id"]
+    data_args = data["args"]
+    if not (isinstance(new_state_id, str) or isinstance(data_args, dict)):
+        return
+    new_state_args = handler(
         engine,
         bot,
         admin,
         state_args,
         update,
-        loads(update.callback_query.data),
+        new_state_id,
+        data_args,
     )
-    if new_state_id is None:
-        return
     user_id = update.callback_query.from_user.id
     get_state_shows()[new_state_id](
         engine,

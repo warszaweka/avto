@@ -8,9 +8,10 @@ sqlalchemy = "*"
 psycopg2 = "*"
 flask = "*"
 gunicorn = "*"
-python-telegram-bot-raw = "*"
-rq = "*"
 ujson = "*"
+gevent = "*"
+psycogreen = "*"
+requests = "*"
 
 [dev-packages]
 
