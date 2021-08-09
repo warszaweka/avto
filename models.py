@@ -1,7 +1,7 @@
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.schema import Column
-from sqlalchemy.types import JSON, Integer, String, UnicodeText
+from sqlalchemy.types import JSON, Integer, String, UnicodeText, Boolean
 
 DeclarativeBase: DeclarativeMeta = declarative_base()
 

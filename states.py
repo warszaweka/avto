@@ -5,16 +5,6 @@ from ujson import dumps, loads
 from models import Article, User
 
 
-def get_user_id(update: Update) -> int:
-    if update.callback_query is not None:
-        return update.callback_query.from_user.id
-    elif update.message is not None:
-        message = update.message
-        if message.from_user is not None:
-            return message.from_user.id
-    raise Exception()
-
-
 def change_state(engine, bot, admin, update, new_state_id, new_state_args):
     user_id = get_user_id(update)
     get_state_shows()[new_state_id](engine, bot, admin, update, new_state_args)
@@ -24,21 +14,6 @@ def change_state(engine, bot, admin, update, new_state_id, new_state_args):
             user.state_id = new_state_id
         user.state_args = new_state_args
         session.commit()
-
-
-def get_current_state_args(engine, update):
-    user_id = get_user_id(update)
-    with Session(engine) as session:
-        user = session.get(User, user_id)
-        if user is not None:
-            user_exists = False
-            current_state_args = user.state_args
-        else:
-            current_state_args = None
-        session.commit()
-    if current_state_args is not None:
-        return current_state_args
-    raise Exception()
 
 
 def handle(engine, bot, admin, state_args, update, handler):
@@ -70,22 +45,6 @@ def handle(engine, bot, admin, state_args, update, handler):
         new_state_args,
     )
     change_state(engine, user_id, new_state_id, new_state_args)
-
-
-def start_handler(engine, bot, admin, update):
-    if update.message.text != "/start":
-        return
-    user_id = update.message.from_user.id
-    main_show(engine, bot, update.message.chat.id, user_id, admin, None)
-    with Session(engine) as session:
-        session.add(
-            User(
-                id=user_id,
-                state_id=main_id,
-                state_args=None,
-            )
-        )
-        session.commit()
 
 
 def get_state_handlers_message():
@@ -522,3 +481,86 @@ def client_show(engine, bot, chat_id, user_id, admin, new_state_args):
             ]
         ),
     )
+
+
+start_id = "start"
+
+
+def start_handler(update: dict):
+    if update.message.text != "/start":
+        return
+    user_id = update.message.from_user.id
+    main_show(engine, bot, update.message.chat.id, user_id, admin, None)
+    with Session(engine) as session:
+        session.add(
+            User(
+                id=user_id,
+                state_id=main_id,
+                state_args=None,
+            )
+        )
+        session.commit()
+
+
+main_id = "main"
+
+
+def main_handler(engine, bot, admin, state_args, update):
+    def handler(engine, bot, admin, state_args, update, data):
+        if "state_id" in data:
+            new_state_id = data["state_id"]
+            if new_state_id in {
+                news_id,
+                ars_id,
+                auction_id,
+                diller_id,
+                client_id,
+            }:
+                return (new_state_id, None)
+        return (None, None)
+
+    route_callback(engine, bot, admin, state_args, update, handler)
+
+
+def main_show(engine, bot, chat_id, user_id, admin, new_state_args):
+    bot.send_message(
+        chat_id,
+        "Главное меню",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Новости", callback_data=dumps({"state_id": news_id})
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "СТО", callback_data=dumps({"state_id": ars_id})
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Аукцион заявок",
+                        callback_data=dumps({"state_id": auction_id}),
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Кабинет диллера",
+                        callback_data=dumps({"state_id": diller_id}),
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Кабинет клиента",
+                        callback_data=dumps({"state_id": client_id}),
+                    )
+                ],
+            ]
+        ),
+    )
+
+
+shows = {main_id: main_show}
+handlers = {start_id: start_handler, main_id: main_handler}
+start_state_id = start_id
