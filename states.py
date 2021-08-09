@@ -1,12 +1,11 @@
 from sqlalchemy.orm import Session
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from ujson import dumps, loads
 
 from models import Article, User
 
 
 def change_state(engine, bot, admin, update, new_state_id, new_state_args):
-    user_id = get_user_id(update)
+    user_id = "lol"
     get_state_shows()[new_state_id](engine, bot, admin, update, new_state_args)
     with Session(engine) as session:
         user = session.get(User, user_id)
