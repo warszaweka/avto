@@ -35,7 +35,7 @@ def tg_request(method: str, data: dict) -> dict:
         url=f"https://api.telegram.org/bot{tg_token}/{method}", json=data
     )
     response.raise_for_status()
-    return response.json
+    return response.json()
 
 
 def tg_handler(data: dict):
