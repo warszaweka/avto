@@ -1,565 +1,275 @@
+from typing import Optional
+
 from sqlalchemy.orm import Session
-from ujson import dumps, loads
 
-from models import Article, User
+import main
+from models import Article
 
-
-def change_state(engine, bot, admin, update, new_state_id, new_state_args):
-    user_id = "lol"
-    get_state_shows()[new_state_id](engine, bot, admin, update, new_state_args)
-    with Session(engine) as session:
-        user = session.get(User, user_id)
-        if user is not None:
-            user.state_id = new_state_id
-        user.state_args = new_state_args
-        session.commit()
+create_article_input_id = "create_article_input"
 
 
-def handle(engine, bot, admin, state_args, update, handler):
-    if update.callback_query.data is None:
-        return
-    data = loads(update.callback_query.data)
-    if "state_id" not in data or "args" not in data:
-        return
-    new_state_id = data["state_id"]
-    data_args = data["args"]
-    if not (isinstance(new_state_id, str) or isinstance(data_args, dict)):
-        return
-    new_state_args = handler(
-        engine,
-        bot,
-        admin,
-        state_args,
-        update,
-        new_state_id,
-        data_args,
-    )
-    user_id = update.callback_query.from_user.id
-    get_state_shows()[new_state_id](
-        engine,
-        bot,
-        update.callback_query.message.chat.id,
-        user_id,
-        admin,
-        new_state_args,
-    )
-    change_state(engine, user_id, new_state_id, new_state_args)
+def create_article_input_handler(update: dict) -> tuple:
+    if update["type"] == "message":
+        return (create_article_confirm_id, update["handler_args"])
+    return (news_id, None)
 
 
-def get_state_handlers_message():
-    return {create_article_id: create_article_handler_message}
-
-
-def get_state_handlers_callback():
-    return {
-        main_id: main_handler_callback,
-        news_id: news_handler_callback,
-        create_article_id: create_article_handler_callback,
-        create_article_confirm_id: create_article_confirm_handler_callback,
-        delete_article_id: delete_article_handler_callback,
-        ars_id: ars_handler_callback,
-        auction_id: auction_handler_callback,
-        diller_id: diller_handler_callback,
-        client_id: client_handler_callback,
-    }
-
-
-def get_state_shows():
-    return {
-        main_id: main_show,
-        news_id: news_show,
-        create_article_id: create_article_show,
-        create_article_confirm_id: create_article_confirm_show,
-        delete_article_id: delete_article_show,
-        ars_id: ars_show,
-        auction_id: auction_show,
-        diller_id: diller_show,
-        client_id: client_show,
-    }
-
-
-main_id = "main"
-
-
-def main_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if "state_id" in data:
-            new_state_id = data["state_id"]
-            if new_state_id in {
-                news_id,
-                ars_id,
-                auction_id,
-                diller_id,
-                client_id,
-            }:
-                return (new_state_id, None)
-        return (None, None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
-
-
-def main_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "Главное меню",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Новости", callback_data=dumps({"state_id": news_id})
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "СТО", callback_data=dumps({"state_id": ars_id})
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Аукцион заявок",
-                        callback_data=dumps({"state_id": auction_id}),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Кабинет диллера",
-                        callback_data=dumps({"state_id": diller_id}),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Кабинет клиента",
-                        callback_data=dumps({"state_id": client_id}),
-                    )
-                ],
-            ]
-        ),
-    )
-
-
-news_id = "news"
-
-
-def news_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if "state_id" in data:
-            new_state_id = data["state_id"]
-            if (
-                new_state_id == main_id
-                or new_state_id == create_article_id
-                and admin
-            ):
-                return (new_state_id, None)
-            elif new_state_id == delete_article_id and admin:
-                return (new_state_id, {"article_id": data["article_id"]})
-        return (None, None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
-
-
-def news_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "Новости",
-        reply_markup=(
-            InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "Создать",
-                            callback_data=dumps(
-                                {"state_id": create_article_id}
-                            ),
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "Главное меню",
-                            callback_data=dumps({"state_id": main_id}),
-                        )
-                    ],
-                ]
-            )
-            if admin
-            else InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "Главное меню",
-                            callback_data=dumps({"state_id": main_id}),
-                        )
-                    ]
-                ]
-            )
-        ),
-    )
-    news = []
-    with Session(engine) as session:
-        for article in session.query(Article).all():
-            news.append({"text": article.text, "id": article.id})
-        session.commit()
-    for article in news:
-        bot.send_message(
-            chat_id,
-            article["text"],
-            reply_markup=(
-                InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                "Удалить",
-                                callback_data=dumps(
-                                    {
-                                        "state_id": "delete_article",
-                                        "article_id": article["id"],
-                                    }
-                                ),
-                            )
-                        ]
-                    ]
-                )
-                if admin
-                else None
-            ),
-        )
-
-
-create_article_id = "create_article"
-
-
-def create_article_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        return (data["state_id"], None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
-
-
-def create_article_handler_message(engine, bot, admin, state_args, update):
-    if update.message.text is None:
-        return
-    new_state_args = {"text": update.message.text}
-    user_id = update.message.from_user.id
-    create_article_confirm_show(
-        engine,
-        bot,
-        update.message.chat.id,
-        user_id,
-        admin,
-        new_state_args,
-    )
-    change_state(engine, user_id, create_article_confirm_id, new_state_args)
-
-
-def create_article_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "Введите статью",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Отмена", callback_data=dumps({"state_id": news_id})
-                    )
-                ]
-            ]
-        ),
-    )
+def create_article_input_show(update: dict) -> list:
+    return [
+        {
+            "text": "Введите статью",
+            "keyboard": [[{"text": "Отмена", "callback": True}]],
+        }
+    ]
 
 
 create_article_confirm_id = "create_article_confirm"
 
 
-def create_article_confirm_handler_callback(
-    engine, bot, admin, state_args, update
-):
-    def handler(engine, bot, admin, state_args, update, data):
-        if data["answer"]:
-            with Session(engine) as session:
-                session.add(Article(text=state_args["text"]))
-                session.commit()
-        return (data["state_id"], None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
+def create_article_confirm_handler(update: dict) -> tuple:
+    if update["handler_args"]:
+        session: Session
+        with Session(main.engine) as session:
+            session.add(Article(text=update["state_args"]))
+            session.commit()
+        return (news_id, None)
+    return (create_article_input_id, None)
 
 
-def create_article_confirm_show(
-    engine, bot, chat_id, user_id, admin, new_state_args
-):
-    bot.send_message(chat_id, "Создать")
-    bot.send_message(chat_id, new_state_args["text"])
-    bot.send_message(
-        chat_id,
-        "Подтвердить",
-        reply_markup=InlineKeyboardMarkup(
-            [
+def create_article_confirm_show(update: dict) -> list:
+    return [
+        {"text": "Создать"},
+        {"text": update["new_state_args"]},
+        {
+            "text": "Подтвердить",
+            "keyboard": [
                 [
-                    InlineKeyboardButton(
-                        "Да",
-                        callback_data=dumps(
-                            {"state_id": news_id, "answer": True}
-                        ),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Нет",
-                        callback_data=dumps(
-                            {"state_id": create_article_id, "answer": False}
-                        ),
-                    )
-                ],
-            ]
-        ),
-    )
-
-
-delete_article_id = "delete_article"
-
-
-def delete_article_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if data["answer"]:
-            with Session(engine) as session:
-                session.delete(session.get(Article, state_args["article_id"]))
-                session.commit()
-        return (data["state_id"], None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
-
-
-def delete_article_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(chat_id, "Удалить")
-    with Session(engine) as session:
-        article = session.get(Article, new_state_args["article_id"]).text
-    bot.send_message(chat_id, article)
-    bot.send_message(
-        chat_id,
-        "Подтвердить",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Да",
-                        callback_data=dumps(
-                            {"state_id": news_id, "answer": True}
-                        ),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Нет",
-                        callback_data=dumps(
-                            {"state_id": news_id, "answer": False}
-                        ),
-                    )
-                ],
-            ]
-        ),
-    )
-
-
-ars_id = "ars"
-
-
-def ars_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if "state_id" in data:
-            new_state_id = data["state_id"]
-            if new_state_id == main_id:
-                return (new_state_id, None)
-        return (None, None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
-
-
-def ars_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "СТО",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Главное меню",
-                        callback_data=dumps({"state_id": main_id}),
-                    )
+                    {"text": "Да", "callback": True},
+                    {"text": "Нет", "callback": False},
                 ]
-            ]
-        ),
-    )
+            ],
+        },
+    ]
 
 
-auction_id = "auction"
+delete_article_confirm_id = "delete_article_confirm"
 
 
-def auction_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if "state_id" in data:
-            new_state_id = data["state_id"]
-            if new_state_id == main_id:
-                return (new_state_id, None)
-        return (None, None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
+def delete_article_confirm_handler(update: dict) -> tuple:
+    if update["handler_args"]:
+        session: Session
+        with Session(main.engine) as session:
+            session.delete(session.get(Article, update["state_args"]))
+            session.commit()
+    return (news_id, None)
 
 
-def auction_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "Аукцион заявок",
-        reply_markup=InlineKeyboardMarkup(
-            [
+def delete_article_confirm_show(update: dict) -> list:
+    session: Session
+    with Session(main.engine) as session:
+        article: str = session.get(Article, update["new_state_args"]).text
+    return [
+        {"text": "Создать"},
+        {"text": article},
+        {
+            "text": "Подтвердить",
+            "keyboard": [
                 [
-                    InlineKeyboardButton(
-                        "Главное меню",
-                        callback_data=dumps({"state_id": main_id}),
-                    )
+                    {"text": "Да", "callback": True},
+                    {"text": "Нет", "callback": False},
                 ]
-            ]
-        ),
-    )
-
-
-diller_id = "diller"
-
-
-def diller_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if "state_id" in data:
-            new_state_id = data["state_id"]
-            if new_state_id == main_id:
-                return (new_state_id, None)
-        return (None, None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
-
-
-def diller_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "Кабинет диллера",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Главное меню",
-                        callback_data=dumps({"state_id": main_id}),
-                    )
-                ]
-            ]
-        ),
-    )
-
-
-client_id = "client"
-
-
-def client_handler_callback(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if "state_id" in data:
-            new_state_id = data["state_id"]
-            if new_state_id == main_id:
-                return (new_state_id, None)
-        return (None, None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
-
-
-def client_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "Кабинет клиента",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Главное меню",
-                        callback_data=dumps({"state_id": main_id}),
-                    )
-                ]
-            ]
-        ),
-    )
+            ],
+        },
+    ]
 
 
 start_id = "start"
 
 
-def start_handler(update: dict):
-    if update.message.text != "/start":
-        return
-    user_id = update.message.from_user.id
-    main_show(engine, bot, update.message.chat.id, user_id, admin, None)
-    with Session(engine) as session:
-        session.add(
-            User(
-                id=user_id,
-                state_id=main_id,
-                state_args=None,
-            )
-        )
-        session.commit()
+def start_handler(update: dict) -> tuple:
+    if update["type"] == "message" and update["handler_args"] == "/start":
+        return (main_id, None)
+    return (None, None)
 
 
 main_id = "main"
 
 
-def main_handler(engine, bot, admin, state_args, update):
-    def handler(engine, bot, admin, state_args, update, data):
-        if "state_id" in data:
-            new_state_id = data["state_id"]
-            if new_state_id in {
-                news_id,
-                ars_id,
-                auction_id,
-                diller_id,
-                client_id,
-            }:
-                return (new_state_id, None)
-        return (None, None)
-
-    route_callback(engine, bot, admin, state_args, update, handler)
+def main_handler(update: dict) -> tuple:
+    if update["type"] == "callback":
+        handler_args = update["handler_args"]
+        if isinstance(handler_args, str) and handler_args in [
+            news_id,
+            ars_id,
+            auction_id,
+            diller_id,
+            client_id,
+        ]:
+            return (handler_args, None)
+    return (None, None)
 
 
-def main_show(engine, bot, chat_id, user_id, admin, new_state_args):
-    bot.send_message(
-        chat_id,
-        "Главное меню",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Новости", callback_data=dumps({"state_id": news_id})
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "СТО", callback_data=dumps({"state_id": ars_id})
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Аукцион заявок",
-                        callback_data=dumps({"state_id": auction_id}),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Кабинет диллера",
-                        callback_data=dumps({"state_id": diller_id}),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Кабинет клиента",
-                        callback_data=dumps({"state_id": client_id}),
-                    )
-                ],
+def main_show(update: dict) -> list:
+    return {
+        "text": "Главное меню",
+        "keyboard": [
+            [{"text": "Новости", "callback": news_id}],
+            [{"text": "СТО", "callback": ars_id}],
+            [{"text": "Аукцион заявок", "callback": auction_id}],
+            [{"text": "Кабинет диллера", "callback": diller_id}],
+            [{"text": "Кабинет клиента", "callback": client_id}],
+        ],
+    }
+
+
+news_id = "news"
+
+
+def news_handler(update: dict) -> tuple:
+    if update["type"] == "callback":
+        admin = update["admin"]
+        handler_args = update["handler_args"]
+        if isinstance(handler_args, str):
+            if handler_args == main_id:
+                return (main_id, None)
+            elif handler_args == create_article_input_id and admin:
+                return (create_article_input_id, None)
+        elif isinstance(handler_args, int) and admin:
+            return (delete_article_confirm_id, handler_args)
+    return (None, None)
+
+
+def news_show(update: dict) -> list:
+    admin: bool = update["admin"]
+    render_list: list = []
+    keyboard: Optional[list] = [
+        [{"text": "Главное меню", "callback": main_id}]
+    ]
+    if admin:
+        keyboard.append(
+            [{"text": "Создать", "callback": create_article_input_id}]
+        )
+    render_list.append({"text": "Новости", "keyboard": keyboard})
+
+    news_dict: list = []
+    session: Session
+    with Session(main.engine) as session:
+        article: Article
+        for article in session.query(Article).all():
+            news_dict.append({"id": article.id, "text": article.text})
+        session.commit()
+    article_dict: dict
+    for article_dict in news_dict:
+        render_message = {"text": article_dict["text"]}
+        if admin:
+            render_message["keyboard"] = [
+                [{"text": "Удалить", "callback": article_dict["id"]}]
             ]
-        ),
-    )
+        render_list.append(render_message)
+
+    return render_list
 
 
-shows = {main_id: main_show}
-handlers = {start_id: start_handler, main_id: main_handler}
-start_state_id = start_id
+ars_id = "ars"
+
+
+def ars_handler(update: dict) -> tuple:
+    if update["type"] == "callback":
+        handler_args = update["handler_args"]
+        if isinstance(handler_args, str) and handler_args == main_id:
+            return (handler_args, None)
+    return (None, None)
+
+
+def ars_show(update: dict) -> list:
+    return [
+        {
+            "text": "СТО",
+            "keyboard": [[{"text": "Главное меню", "callback": main_id}]],
+        }
+    ]
+
+
+auction_id = "auction"
+
+
+def auction_handler(update: dict) -> tuple:
+    if update["type"] == "callback":
+        handler_args = update["handler_args"]
+        if isinstance(handler_args, str) and handler_args == main_id:
+            return (handler_args, None)
+    return (None, None)
+
+
+def auction_show(update: dict) -> list:
+    return [
+        {
+            "text": "Аукцион заявок",
+            "keyboard": [[{"text": "Главное меню", "callback": main_id}]],
+        }
+    ]
+
+
+diller_id = "diller"
+
+
+def diller_handler(update: dict) -> tuple:
+    if update["type"] == "callback":
+        handler_args = update["handler_args"]
+        if isinstance(handler_args, str) and handler_args == main_id:
+            return (handler_args, None)
+    return (None, None)
+
+
+def diller_show(update: dict) -> list:
+    return [
+        {
+            "text": "Кабинет диллера",
+            "keyboard": [[{"text": "Главное меню", "callback": main_id}]],
+        }
+    ]
+
+
+client_id = "client"
+
+
+def client_handler(update: dict) -> tuple:
+    if update["type"] == "callback":
+        handler_args = update["handler_args"]
+        if isinstance(handler_args, str) and handler_args == main_id:
+            return (handler_args, None)
+    return (None, None)
+
+
+def client_show(update: dict) -> list:
+    return [
+        {
+            "text": "Кабинет клиента",
+            "keyboard": [[{"text": "Главное меню", "callback": main_id}]],
+        }
+    ]
+
+
+shows = {
+    main_id: main_show,
+    news_id: news_show,
+    create_article_input_id: create_article_input_show,
+    create_article_confirm_id: create_article_confirm_show,
+    delete_article_confirm_id: delete_article_confirm_show,
+    ars_id: ars_show,
+    auction_id: auction_show,
+    diller_id: diller_show,
+    client_id: client_show,
+}
+handlers = {
+    start_id: start_handler,
+    main_id: main_handler,
+    news_id: news_handler,
+    create_article_input_id: create_article_input_handler,
+    create_article_confirm_id: create_article_confirm_handler,
+    delete_article_confirm_id: delete_article_confirm_handler,
+    ars_id: ars_handler,
+    auction_id: auction_handler,
+    diller_id: diller_handler,
+    client_id: client_handler,
+}
