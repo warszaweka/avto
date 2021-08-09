@@ -46,11 +46,13 @@ def tg_handler(data: dict):
         type = "message"
         message: dict = data["message"]
         user_id: int = message["from"]["id"]
+        chat_id: int = message["chat"]["id"]
         handler_args = message
     elif "callback_query" in data:
         type = "callback"
         callback: dict = data["callback_query"]
         user_id = callback["from"]["id"]
+        chat_id: int = callback["message"]["chat"]["id"]
         handler_args = loads(callback["data"])
     else:
         return
@@ -71,6 +73,21 @@ def tg_handler(data: dict):
         session.commit()
     update["current_state_id"] = current_state_id
     update["current_state_args"] = current_state_args
+
+    print(
+        tg_request(
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": "KEK",
+                "reply_markup": {
+                    "inline_keyboard": [
+                        [{"text": "AHA", "callback_data": "RRR"}]
+                    ]
+                },
+            },
+        )
+    )
 
 
 flask: Flask = Flask(__name__)
