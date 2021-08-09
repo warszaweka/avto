@@ -7,7 +7,7 @@ DeclarativeBase: DeclarativeMeta = declarative_base()
 
 
 class User(DeclarativeBase):
-    __tablename__: str = "state"
+    __tablename__: str = "user"
 
     id: Column = Column(Integer, primary_key=True)
     state_id: Column = Column(String(64), nullable=False)
