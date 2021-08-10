@@ -110,16 +110,18 @@ def main_handler(update: dict) -> tuple:
 
 
 def main_show(update: dict) -> list:
-    return {
-        "text": "Главное меню",
-        "keyboard": [
-            [{"text": "Новости", "callback": news_id}],
-            [{"text": "СТО", "callback": ars_id}],
-            [{"text": "Аукцион заявок", "callback": auction_id}],
-            [{"text": "Кабинет диллера", "callback": diller_id}],
-            [{"text": "Кабинет клиента", "callback": client_id}],
-        ],
-    }
+    return [
+        {
+            "text": "Главное меню",
+            "keyboard": [
+                [{"text": "Новости", "callback": news_id}],
+                [{"text": "СТО", "callback": ars_id}],
+                [{"text": "Аукцион заявок", "callback": auction_id}],
+                [{"text": "Кабинет диллера", "callback": diller_id}],
+                [{"text": "Кабинет клиента", "callback": client_id}],
+            ],
+        }
+    ]
 
 
 news_id = "news"
