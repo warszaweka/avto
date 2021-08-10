@@ -69,7 +69,7 @@ def delete_article_confirm_show(update: dict) -> list:
     with Session(main.engine) as session:
         article: str = session.get(Article, update["new_state_args"]).text
     return [
-        {"text": "Создать"},
+        {"text": "Удалить"},
         {"text": article},
         {
             "text": "Подтвердить",
