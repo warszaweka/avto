@@ -30,7 +30,7 @@ def create_article_confirm_handler(update: dict) -> tuple:
     if update["handler_args"]:
         session: Session
         with Session(main.engine) as session:
-            session.add(Article(text=update["state_args"]))
+            session.add(Article(text=update["current_state_args"]))
             session.commit()
         return (news_id, None)
     return (create_article_input_id, None)
@@ -59,7 +59,7 @@ def delete_article_confirm_handler(update: dict) -> tuple:
     if update["handler_args"]:
         session: Session
         with Session(main.engine) as session:
-            session.delete(session.get(Article, update["state_args"]))
+            session.delete(session.get(Article, update["current_state_args"]))
             session.commit()
     return (news_id, None)
 
