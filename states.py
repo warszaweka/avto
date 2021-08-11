@@ -3,145 +3,90 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 import main
-from models import Article
-
-create_article_input_id = "create_article_input"
-
-
-def create_article_input_handler(update: dict) -> tuple:
-    if update["type"] == "message":
-        return (create_article_confirm_id, update["handler_args"])
-    return (news_id, None)
-
-
-def create_article_input_show(update: dict) -> list:
-    return [
-        {
-            "text": "Введите статью",
-            "keyboard": [[{"text": "Отмена", "callback": True}]],
-        }
-    ]
-
-
-create_article_confirm_id = "create_article_confirm"
-
-
-def create_article_confirm_handler(update: dict) -> tuple:
-    if update["handler_args"]:
-        session: Session
-        with Session(main.engine) as session:
-            session.add(Article(text=update["current_state_args"]))
-            session.commit()
-        return (news_id, None)
-    return (create_article_input_id, None)
-
-
-def create_article_confirm_show(update: dict) -> list:
-    return [
-        {"text": "Создать"},
-        {"text": update["new_state_args"]},
-        {
-            "text": "Подтвердить",
-            "keyboard": [
-                [
-                    {"text": "Да", "callback": True},
-                    {"text": "Нет", "callback": False},
-                ]
-            ],
-        },
-    ]
-
-
-delete_article_confirm_id = "delete_article_confirm"
-
-
-def delete_article_confirm_handler(update: dict) -> tuple:
-    if update["handler_args"]:
-        session: Session
-        with Session(main.engine) as session:
-            session.delete(session.get(Article, update["current_state_args"]))
-            session.commit()
-    return (news_id, None)
-
-
-def delete_article_confirm_show(update: dict) -> list:
-    session: Session
-    with Session(main.engine) as session:
-        article: str = session.get(Article, update["new_state_args"]).text
-    return [
-        {"text": "Удалить"},
-        {"text": article},
-        {
-            "text": "Подтвердить",
-            "keyboard": [
-                [
-                    {"text": "Да", "callback": True},
-                    {"text": "Нет", "callback": False},
-                ]
-            ],
-        },
-    ]
-
+from models import Ars, Article, ars_name_length
 
 start_id = "start"
 
 
-def start_handler(update: dict) -> tuple:
-    if update["type"] == "message" and update["handler_args"] == "/start":
-        return (main_id, None)
-    return (None, None)
+def start_handler(update: dict):
+    if (
+        update["type"] == "message"
+        and update["handler_args"]["text"] == "/start"
+    ):
+        update["new_state_id"] = main_id
 
 
 main_id = "main"
 
 
-def main_handler(update: dict) -> tuple:
+def main_handler(update: dict):
     if update["type"] == "callback":
         handler_args = update["handler_args"]
-        if isinstance(handler_args, str) and handler_args in [
-            news_id,
-            ars_id,
-            auction_id,
-            diller_id,
-            client_id,
-        ]:
-            return (handler_args, None)
-    return (None, None)
+        if "state_id" in handler_args:
+            new_state_id = handler_args["state_id"]
+            if isinstance(new_state_id, str) and new_state_id in [
+                news_id,
+                ars_id,
+                auction_id,
+                diller_id,
+                client_id,
+            ]:
+                update["new_state_id"] = new_state_id
 
 
-def main_show(update: dict) -> list:
-    return [
-        {
-            "text": "Главное меню",
-            "keyboard": [
-                [{"text": "Новости", "callback": news_id}],
-                [{"text": "СТО", "callback": ars_id}],
-                [{"text": "Аукцион заявок", "callback": auction_id}],
-                [{"text": "Кабинет диллера", "callback": diller_id}],
-                [{"text": "Кабинет клиента", "callback": client_id}],
-            ],
-        }
-    ]
+def main_show(update: dict):
+    update["render_list"].append(
+        [
+            {
+                "text": "Главное меню",
+                "keyboard": [
+                    [{"text": "Новости", "callback": {"state_id": news_id}}],
+                    [{"text": "СТО", "callback": {"state_id": ars_id}}],
+                    [
+                        {
+                            "text": "Аукцион заявок",
+                            "callback": {"state_id": auction_id},
+                        }
+                    ],
+                    [
+                        {
+                            "text": "Кабинет диллера",
+                            "callback": {"state_id": diller_id},
+                        }
+                    ],
+                    [
+                        {
+                            "text": "Кабинет клиента",
+                            "callback": {"state_id": client_id},
+                        }
+                    ],
+                ],
+            }
+        ]
+    )
 
 
 news_id = "news"
 
 
-def news_handler(update: dict) -> tuple:
+def news_handler(update: dict):
     if update["type"] == "callback":
         admin = update["admin"]
         handler_args = update["handler_args"]
+        if "state_id" in handler_args:
+            new_state_id = handler_args["state_id"]
         if isinstance(handler_args, str):
-            if handler_args == main_id:
-                return (main_id, None)
-            elif handler_args == create_article_input_id and admin:
-                return (create_article_input_id, None)
+            if (
+                handler_args == main_id
+                or handler_args == create_article_input_id
+                and admin
+            ):
+                update["new_state_id"] = handler_args
         elif isinstance(handler_args, int) and admin:
             return (delete_article_confirm_id, handler_args)
-    return (None, None)
 
 
-def news_show(update: dict) -> list:
+def news_show(update: dict):
     admin: bool = update["admin"]
     render_list: list = []
     keyboard: Optional[list] = [
@@ -172,10 +117,92 @@ def news_show(update: dict) -> list:
     return render_list
 
 
+create_article_input_id = "create_article_input"
+
+
+def create_article_input_handler(update: dict):
+    if update["type"] == "message":
+        return (create_article_confirm_id, update["handler_args"])
+    return (news_id, None)
+
+
+def create_article_input_show(update: dict):
+    return [
+        {
+            "text": "Введите статью",
+            "keyboard": [[{"text": "Отмена", "callback": True}]],
+        }
+    ]
+
+
+create_article_confirm_id = "create_article_confirm"
+
+
+def create_article_confirm_handler(update: dict):
+    handler_args = update["handler_args"]
+    if isinstance(handler_args, bool):
+        if handler_args:
+            session: Session
+            with Session(main.engine) as session:
+                session.add(Article(text=update["current_state_args"]))
+                session.commit()
+            return (news_id, None)
+        return (create_article_input_id, None)
+    return (news_id, None)
+
+
+def create_article_confirm_show(update: dict):
+    return [
+        {"text": "Создать"},
+        {"text": update["new_state_args"]},
+        {
+            "text": "Подтвердить",
+            "keyboard": [
+                [
+                    {"text": "Да", "callback": True},
+                    {"text": "Нет", "callback": False},
+                ],
+                [{"text": "Отмена", "callback": "cancel"}],
+            ],
+        },
+    ]
+
+
+delete_article_confirm_id = "delete_article_confirm"
+
+
+def delete_article_confirm_handler(update: dict):
+    if update["handler_args"]:
+        session: Session
+        with Session(main.engine) as session:
+            session.delete(session.get(Article, update["current_state_args"]))
+            session.commit()
+    return (news_id, None)
+
+
+def delete_article_confirm_show(update: dict):
+    session: Session
+    with Session(main.engine) as session:
+        article: str = session.get(Article, update["new_state_args"]).text
+    return [
+        {"text": "Удалить"},
+        {"text": article},
+        {
+            "text": "Подтвердить",
+            "keyboard": [
+                [
+                    {"text": "Да", "callback": True},
+                    {"text": "Нет", "callback": False},
+                ]
+            ],
+        },
+    ]
+
+
 ars_id = "ars"
 
 
-def ars_handler(update: dict) -> tuple:
+def ars_handler(update: dict):
     if update["type"] == "callback":
         handler_args = update["handler_args"]
         if isinstance(handler_args, str) and handler_args == main_id:
@@ -183,7 +210,7 @@ def ars_handler(update: dict) -> tuple:
     return (None, None)
 
 
-def ars_show(update: dict) -> list:
+def ars_show(update: dict):
     return [
         {
             "text": "СТО",
@@ -195,7 +222,7 @@ def ars_show(update: dict) -> list:
 auction_id = "auction"
 
 
-def auction_handler(update: dict) -> tuple:
+def auction_handler(update: dict):
     if update["type"] == "callback":
         handler_args = update["handler_args"]
         if isinstance(handler_args, str) and handler_args == main_id:
@@ -203,7 +230,7 @@ def auction_handler(update: dict) -> tuple:
     return (None, None)
 
 
-def auction_show(update: dict) -> list:
+def auction_show(update: dict):
     return [
         {
             "text": "Аукцион заявок",
@@ -215,7 +242,7 @@ def auction_show(update: dict) -> list:
 diller_id = "diller"
 
 
-def diller_handler(update: dict) -> tuple:
+def diller_handler(update: dict):
     if update["type"] == "callback":
         handler_args = update["handler_args"]
         if isinstance(handler_args, str) and handler_args == main_id:
@@ -223,7 +250,7 @@ def diller_handler(update: dict) -> tuple:
     return (None, None)
 
 
-def diller_show(update: dict) -> list:
+def diller_show(update: dict):
     return [
         {
             "text": "Кабинет диллера",
@@ -232,10 +259,95 @@ def diller_show(update: dict) -> list:
     ]
 
 
+create_ars_input_name_id = "create_ars_input_name"
+
+
+def create_ars_input_name_handler(update: dict):
+    type: str = update["type"]
+    if type == "message":
+        text: str = update["handler_args"]
+        if len(text) <= ars_name_length:
+            return (create_ars_input_description_id, {"name": text})
+
+    return (news_id, None)
+
+
+def create_ars_input_name_show(update: dict):
+    return [
+        {
+            "text": "Введите название СТО",
+            "keyboard": [[{"text": "Отмена", "callback": "cancel"}]],
+        }
+    ]
+
+
+create_ars_input_description_id = "create_ars_input_description"
+
+
+create_article_confirm_id = "create_article_confirm"
+
+
+def create_article_confirm_handler(update: dict):
+    if update["handler_args"]:
+        session: Session
+        with Session(main.engine) as session:
+            session.add(Article(text=update["current_state_args"]))
+            session.commit()
+        return (news_id, None)
+    return (create_article_input_id, None)
+
+
+def create_article_confirm_show(update: dict):
+    return [
+        {"text": "Создать"},
+        {"text": update["new_state_args"]},
+        {
+            "text": "Подтвердить",
+            "keyboard": [
+                [
+                    {"text": "Да", "callback": True},
+                    {"text": "Нет", "callback": False},
+                ]
+            ],
+        },
+    ]
+
+
+delete_article_confirm_id = "delete_article_confirm"
+
+
+def delete_article_confirm_handler(update: dict):
+    if update["handler_args"]:
+        session: Session
+        with Session(main.engine) as session:
+            session.delete(session.get(Article, update["current_state_args"]))
+            session.commit()
+    return (news_id, None)
+
+
+def delete_article_confirm_show(update: dict):
+    session: Session
+    with Session(main.engine) as session:
+        article: str = session.get(Article, update["new_state_args"]).text
+    return [
+        {"text": "Удалить"},
+        {"text": article},
+        {
+            "text": "Подтвердить",
+            "keyboard": [
+                [
+                    {"text": "Да", "callback": True},
+                    {"text": "Нет", "callback": False},
+                ]
+            ],
+        },
+    ]
+
+
 client_id = "client"
 
 
-def client_handler(update: dict) -> tuple:
+def client_handler(update: dict):
     if update["type"] == "callback":
         handler_args = update["handler_args"]
         if isinstance(handler_args, str) and handler_args == main_id:
@@ -243,7 +355,7 @@ def client_handler(update: dict) -> tuple:
     return (None, None)
 
 
-def client_show(update: dict) -> list:
+def client_show(update: dict):
     return [
         {
             "text": "Кабинет клиента",
