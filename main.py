@@ -182,7 +182,8 @@ def tg_handler(data):
     try:
         try:
             tg_request("editMessageMedia", rendered_message)
-        except Exception:
+        except Exception as e:
+            print(e)
             tg_message_id = tg_request(
                 "sendPhoto", {"chat_id": user_tg_id, "photo": wp_id}
             )["message_id"]
@@ -192,7 +193,8 @@ def tg_handler(data):
                 user = session.get(User, user_id)
                 user.tg_message_id = tg_message_id
                 session.commit()
-    except Exception:
+    except Exception as e:
+        print(e)
         return
 
     with Session(engine) as session:
