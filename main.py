@@ -37,7 +37,7 @@ wp_id = getenv("WP_ID")
 def tg_request(method, data):
     response = post(url=f"{tg_url}{method}", json=data)
     response.raise_for_status()
-    response_data = response.json
+    response_data = response.json()
     if not response_data["ok"]:
         raise Exception(response_data["description"])
     return response_data["result"]
