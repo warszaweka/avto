@@ -115,9 +115,12 @@ def tg_handler(data):
             user_id = user.id
 
     if type == "message":
-        if current_state_id not in message_handlers:
+        if not (
+            current_state_id in message_handlers
+            and subtype in message_handlers[current_state_id]
+        ):
             return
-        handler_return = message_handlers[subtype][current_state_id](
+        handler_return = message_handlers[current_state_id][subtype](
             user_id, current_state_args, content
         )
         if handler_return is None:
