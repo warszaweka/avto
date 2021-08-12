@@ -165,7 +165,9 @@ def tg_handler(data):
                 )
             except Exception:
                 return
-            if handler_return is not None:
+            if handler_return is None:
+                state_id = new_state_id
+            else:
                 state_id = handler_return
             for new_state_arg_key, new_state_arg_val in new_state_args.items():
                 if (
