@@ -100,7 +100,7 @@ def tg_handler(data):
     if not user_exists:
         tg_message_id = tg_request(
             "sendPhoto", {"chat_id": user_tg_id, "photo": wp_id}
-        )["result"]["message_id"]
+        )["message_id"]
         current_state_id = start_id
         current_state_args = {}
         with Session(engine) as session:
