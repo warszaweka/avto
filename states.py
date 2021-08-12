@@ -14,7 +14,7 @@ start_id = "start"
 
 
 def start_text_handler(user_id, current_state_args, content):
-    if "text" == "/start":
+    if content == "/start":
         return main_id
 
 
