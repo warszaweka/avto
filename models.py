@@ -1,41 +1,115 @@
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import RelationshipProperty, declarative_base, relationship
-from sqlalchemy.orm.decl_api import DeclarativeMeta
+from sqlalchemy.dialects.postgresql import (BIGINT, BOOLEAN, JSONB, MONEY,
+                                            VARCHAR)
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.types import JSON, BigInteger, String, Unicode, UnicodeText
 
-ars_name_length = 128
+DeclarativeBase = declarative_base()
 
-DeclarativeBase: DeclarativeMeta = declarative_base()
+PHOTO_LENGTH = 128
+PHONE_LENGTH = 16
+
+STATE_ID_LENGTH = 64
 
 
 class User(DeclarativeBase):
-    __tablename__: str = "user"
+    __tablename__ = "user"
 
-    id: Column = Column(BigInteger, primary_key=True)
-    state_id: Column = Column(String(64), nullable=False)
-    state_args: Column = Column(JSON, nullable=False)
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    tg_id = Column(BIGINT, index=True, nullable=False, unique=True)
+    tg_message_id = Column(BIGINT, nullable=False)
+    state_id = Column(VARCHAR(STATE_ID_LENGTH), nullable=False)
+    state_args = Column(JSONB, nullable=False)
 
-    arses: RelationshipProperty = relationship("Ars", back_populates="user")
+    arses = relationship("Ars", back_populates="user")
+    requests = relationship("Request", back_populates="user")
 
 
-class Article(DeclarativeBase):
-    __tablename__: str = "article"
+SPEC_NAME_LENGTH = 32
 
-    id: Column = Column(BigInteger, primary_key=True, autoincrement=True)
-    text: Column = Column(UnicodeText, nullable=False)
-    photo: Column = Column(UnicodeText)
+
+class Spec(DeclarativeBase):
+    __tablename__ = "spec"
+
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    name = Column(VARCHAR(SPEC_NAME_LENGTH), nullable=False)
+
+    ars_specs = relationship("ArsSpec", back_populates="spec")
+    request_specs = relationship("RequestSpec", back_populates="spec")
+
+
+ARS_NAME_LENGTH = 128
+ARS_DESCRIPTION_LENGTH = 2048
+ARS_ADDRESS_LENGTH = 64
 
 
 class Ars(DeclarativeBase):
-    __tablename__: str = "ars"
+    __tablename__ = "ars"
 
-    id: Column = Column(BigInteger, primary_key=True, autoincrement=True)
-    name: Column = Column(Unicode(ars_name_length), nullable=False)
-    description: Column = Column(UnicodeText)
-    photo: Column = Column(UnicodeText)
-    phone_number: Column = Column(String(16))
-    address: Column = Column(String(64))
-    user_id: Column = Column(BigInteger, ForeignKey(User.id), nullable=False)
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    name = Column(VARCHAR(ARS_NAME_LENGTH), nullable=False)
+    description = Column(VARCHAR(ARS_DESCRIPTION_LENGTH), nullable=False)
+    photo = Column(VARCHAR(PHOTO_LENGTH))
+    phone = Column(VARCHAR(PHONE_LENGTH), nullable=False)
+    address = Column(VARCHAR(ARS_ADDRESS_LENGTH), nullable=False)
+    active = Column(BOOLEAN, nullable=False)
+    user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
 
-    user: RelationshipProperty = relationship(User, back_populates="arses")
+    user = relationship(User, back_populates="arses")
+    ars_specs = relationship("ArsSpec", back_populates="ars")
+    offers = relationship("Offer", back_populates="ars")
+
+
+class ArsSpec(DeclarativeBase):
+    __tablename__ = "ars_spec"
+
+    ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
+    spec_id = Column(BIGINT, ForeignKey(Spec.id), primary_key=True)
+    cost_floor = Column(MONEY, nullable=False)
+    cost_ceil = Column(MONEY)
+
+    ars = relationship(Ars, back_populates="ars_specs")
+    spec = relationship(Spec, back_populates="ars_specs")
+
+
+REQEST_DESCRIPTION_LENGTH = 2048
+
+
+class Request(DeclarativeBase):
+    __tablename__ = "request"
+
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    description = Column(VARCHAR(REQEST_DESCRIPTION_LENGTH), nullable=False)
+    photo = Column(VARCHAR(PHOTO_LENGTH))
+    phone = Column(VARCHAR(PHONE_LENGTH), nullable=False)
+    active = Column(BOOLEAN, nullable=False)
+    user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
+
+    user = relationship(User, back_populates="requests")
+    request_specs = relationship("RequestSpec", back_populates="request")
+    offers = relationship("Offer", back_populates="request")
+
+
+class RequestSpec(DeclarativeBase):
+    __tablename__ = "request_spec"
+
+    request_id = Column(BIGINT, ForeignKey(Request.id), primary_key=True)
+    spec_id = Column(BIGINT, ForeignKey(Spec.id), primary_key=True)
+
+    request = relationship(Request, back_populates="request_specs")
+    spec = relationship(Spec, back_populates="request_specs")
+
+
+class Offer(DeclarativeBase):
+    __tablename__ = "offer"
+
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    cost_floor = Column(MONEY, nullable=False)
+    cost_ceil = Column(MONEY)
+    active = Column(BOOLEAN, nullable=False)
+    winner = Column(BOOLEAN, nullable=False)
+    ars_id = Column(BIGINT, ForeignKey(Ars.id), nullable=False)
+    request_id = Column(BIGINT, ForeignKey(Request.id), nullable=False)
+
+    ars = relationship(Ars, back_populates="offers")
+    request = relationship(Request, back_populates="offers")

@@ -8,115 +8,187 @@ patch_psycopg()
 
 from os import getenv
 from re import sub
-from typing import Optional
+from typing import Any, Optional
 
 from flask import Flask, request
 from gevent import spawn
-from requests import post
+from requests import Response, post
+from sqlalchemy import select
 from sqlalchemy.future import Engine, create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.schema import Column
 from ujson import dumps, loads
 
 from models import DeclarativeBase, User
-from states import handlers, shows, start_id
+from states import (callback_handlers, message_handlers, set_engine, shows,
+                    start_id)
 
-engine: Engine = create_engine(
+engine = create_engine(
     sub(r"^[^:]*", "postgresql+psycopg2", getenv("DB_URL"), 1)
 )
 DeclarativeBase.metadata.create_all(engine)
+set_engine(engine)
 
-tg_token: str = getenv("TG_TOKEN")
+tg_url = f"https://api.telegram.org/bot{getenv('TG_TOKEN')}/"
 
-admins: list = list(map(int, getenv("ADMINS").split(";")))
+wp_id = getenv("WP_ID")
 
 
-def tg_handler(data: dict):
-    print(data)  # debug
-    return
-    type: str
-    chat_id: int
-    user_id: int
-    handler_args: dict
+def tg_request(method, data):
+    response = post(url=f"{tg_url}{method}", json=data)
+    response.raise_for_status()
+    response_data = response.json
+    if not response_data["ok"]:
+        raise Exception(response_data["description"])
+    return response_data["result"]
+
+
+def tg_handler(data):
     if "message" in data:
-        type = "message"
-        message: dict = data["message"]
-        chat_id = message["chat"]["id"]
-        user_id = message["from"]["id"]
-        handler_args = {}
-        if "text" in message:
-            handler_args["text"] = message["text"]
-    elif "callback_query" in data:
-        callback: dict = data["callback_query"]
-        handler_args = loads(callback["data"])
-        if not isinstance(handler_args, dict):
+        if "text" in data["message"]:
+            subtype = "text"
+            content = data["message"]["text"]
+        elif "photo" in data["message"]:
+            subtype = "photo"
+            content = data["message"]["photo"][0]["file_id"]
+        else:
             return
+        type = "message"
+        user_tg_id = data["message"]["from"]["id"]
+        try:
+            tg_request(
+                "deleteMessage",
+                {
+                    "chat_id": user_tg_id,
+                    "message_id": data["message"]["message_id"],
+                },
+            )
+        except Exception:
+            pass
+    elif "callback_query" in data:
+        callback = data["callback_query"]
+        callback_data = loads(callback["data"])
+        if not (
+            isinstance(callback_data, dict)
+            and "state_id" in callback_data
+            and isinstance(callback_data["state_id"], str)
+            and "state_args" in callback_data
+            and isinstance(callback_data["state_args"], dict)
+        ):
+            return
+        new_state_id = callback_data["state_id"]
+        new_state_args = callback_data["state_args"]
         type = "callback"
-        chat_id = callback["message"]["chat"]["id"]
-        user_id = callback["from"]["id"]
+        user_tg_id = callback["from"]["id"]
     else:
         return
 
-    admin: bool = user_id in admins
-
-    session: Session
+    user_exists = False
     with Session(engine) as session:
-        user: Optional[User] = session.get(User, user_id)
-        if user is None:
-            user = User(id=user_id, state_id=start_id, state_args={})
+        user = (
+            session.execute(select(User).where(User.tg_id == user_tg_id))
+            .scalars()
+            .first()
+        )
+        if user is not None:
+            user_exists = True
+            user_id = user.id
+            current_state_id = user.state_id
+            current_state_args = user.state_args
+            tg_message_id = user.tg_message_id
+    if not user_exists:
+        tg_message_id = tg_request(
+            "sendPhoto", json={"chat_id": user_tg_id, "photo": wp_id}
+        )["result"]["message_id"]
+        current_state_id = start_id
+        current_state_args = {}
+        with Session(engine) as session:
+            user = User(
+                tg_id=user_tg_id,
+                tg_message_id=tg_message_id,
+                state_id=current_state_id,
+                state_args=current_state_args,
+            )
             session.add(user)
-        current_state_id: str = user.state_id
-        current_state_args: dict = user.state_args
-        session.commit()
+            session.commit()
+            user_id = user.id
 
-    handler_return = handlers[current_state_id][type](
-        user_id, admin, current_state_args, handler_args
-    )
-    if handler_return is None:
-        return
-    new_state_id: str
-    new_state_args: dict = {}
-    render_list: list = []
-    if not isinstance(handler_return, tuple):
+    if type == "message":
+        if current_state_id not in message_handlers:
+            return
+        handler_return = message_handlers[subtype][current_state_id](
+            user_id, current_state_args, content
+        )
+        if handler_return is None:
+            return
         new_state_id = handler_return
+        new_state_args = current_state_args
+    elif current_state_id in callback_handlers:
+        try:
+            handler_return = callback_handlers[current_state_id](
+                user_id, current_state_args, new_state_id, new_state_args
+            )
+        except Exception:
+            return
+        if handler_return is not None:
+            new_state_id = handler_return
     else:
-        new_state_id = handler_return[0]
-        new_state_args = handler_return[1]
-        if len(handler_return) == 3:
-            render_list = handler_return[2]
+        return
 
-    render_list.extend(shows[new_state_id](user_id, admin, new_state_args))
-
-    render_message: dict
-    for render_message in render_list:
-        rendered_message = {"chat_id": chat_id}
-        url: str
-        if "keyboard" in render_message:
-            rendered_keyboard: list = []
-            render_row: list
-            render_button: dict
-            for render_row in render_message["keyboard"]:
-                rendered_row = []
-                for render_button in render_row:
-                    if "text" in render_button:
-                        rendered_button = {"text": render_button["text"]}
-                        if "callback" in render_button:
-                            rendered_button["callback_data"] = dumps(
-                                render_button["callback"]
-                            )
-                        rendered_row.append(rendered_button)
-                if rendered_row:
-                    rendered_keyboard.append(rendered_row)
-            if rendered_keyboard:
-                rendered_message["reply_markup"] = {
-                    "inline_keyboard": rendered_keyboard
-                }
+    render_message = shows[new_state_id](user_id, new_state_args)
+    rendered_message = {"chat_id": user_tg_id, "message_id": tg_message_id}
+    if "photo" in render_message:
+        rendered_message = {
+            "media": {
+                "type": "photo",
+                "media": render_message["photo"],
+            }
+        }
         if "text" in render_message:
-            rendered_message["text"] = render_message["text"]
-            url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
-        post(
-            url=url,
-            json=rendered_message,
-        ).raise_for_status()
+            rendered_message["media"]["caption"] = render_message["text"]
+    else:
+        rendered_message = {
+            "media": {
+                "type": "photo",
+                "media": wp_id,
+                "caption": render_message["text"],
+            }
+        }
+    if "keyboard" in render_message:
+        rendered_keyboard = []
+        for render_row in render_message["keyboard"]:
+            rendered_row = []
+            for render_button in render_row:
+                if "text" in render_button:
+                    rendered_button = {"text": render_button["text"]}
+                    if "callback" in render_button:
+                        rendered_button["callback_data"] = dumps(
+                            render_button["callback"]
+                        )
+                    else:
+                        rendered_button["url"] = render_button["url"]
+                    rendered_row.append(rendered_button)
+            if rendered_row:
+                rendered_keyboard.append(rendered_row)
+        if rendered_keyboard:
+            rendered_message["reply_markup"] = {
+                "inline_keyboard": rendered_keyboard
+            }
+    try:
+        try:
+            tg_request("editMessageMedia", json=rendered_message)
+        except Exception:
+            tg_message_id = tg_request(
+                "sendPhoto", json={"chat_id": user_tg_id, "photo": wp_id}
+            )["result"]["message_id"]
+            rendered_message["message_id"] = tg_message_id
+            tg_request("editMessageMedia", json=rendered_message)
+            with Session(engine) as session:
+                user = session.get(User, user_id)
+                user.tg_message_id = tg_message_id
+                session.commit()
+    except Exception:
+        return
 
     with Session(engine) as session:
         user = session.get(User, user_id)
