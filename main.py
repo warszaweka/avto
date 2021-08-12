@@ -163,7 +163,8 @@ def tg_handler(data):
                 handler_return = callback_handlers[state_id](
                     id, state_args, new_state_id, new_state_args
                 )
-            except Exception:
+            except Exception as e:  # debug
+                print(e)  # debug
                 return
             if handler_return is None:
                 state_id = new_state_id
