@@ -1,5 +1,3 @@
-from sqlalchemy.orm import Session
-
 engine = None
 
 
@@ -8,20 +6,10 @@ def set_engine(new_engine):
     engine = new_engine
 
 
-start_id = "start"
-
-
-def start_text_handler(user_id, current_state_args, content):
-    if content == "/start":
-        return main_id
-
-
 main_id = "main"
 
 
-def main_callback_handler(
-    user_id, current_state_args, new_state_id, new_state_args
-):
+def main_callback_handler(user_id, state_args, new_state_id, new_state_args):
     if (
         new_state_id not in [ars_id, auction_id, diller_id, client_id]
         or new_state_args
@@ -64,9 +52,7 @@ def main_show(user_id, new_state_args):
 ars_id = "ars"
 
 
-def ars_callback_handler(
-    user_id, current_state_args, new_state_id, new_state_args
-):
+def ars_callback_handler(user_id, state_args, new_state_id, new_state_args):
     if new_state_id != main_id or new_state_args:
         raise Exception()
 
@@ -89,7 +75,7 @@ auction_id = "auction"
 
 
 def auction_callback_handler(
-    user_id, current_state_args, new_state_id, new_state_args
+    user_id, state_args, new_state_id, new_state_args
 ):
     if new_state_id != main_id or new_state_args:
         raise Exception()
@@ -112,9 +98,7 @@ def auction_show(user_id, new_state_args):
 diller_id = "diller"
 
 
-def diller_callback_handler(
-    user_id, current_state_args, new_state_id, new_state_args
-):
+def diller_callback_handler(user_id, state_args, new_state_id, new_state_args):
     if new_state_id != main_id or new_state_args:
         raise Exception()
 
@@ -136,9 +120,7 @@ def diller_show(user_id, new_state_args):
 client_id = "client"
 
 
-def client_callback_handler(
-    user_id, current_state_args, new_state_id, new_state_args
-):
+def client_callback_handler(user_id, state_args, new_state_id, new_state_args):
     if new_state_id != main_id or new_state_args:
         raise Exception()
 
@@ -157,7 +139,7 @@ def client_show(user_id, new_state_args):
     }
 
 
-message_handlers = {start_id: {"text": start_text_handler}}
+message_handlers = {}
 callback_handlers = {
     main_id: main_callback_handler,
     ars_id: ars_callback_handler,
