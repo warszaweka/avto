@@ -35,17 +35,16 @@ wp_id = getenv("WP_ID")
 
 
 def tg_request(method, data):
-    print(method, data)  # debug
     response = post(url=f"{tg_url}{method}", json=data)
     response.raise_for_status()
     response_data = response.json()
-    print(response_data)  # debug
     if not response_data["ok"]:
         raise Exception(response_data["description"])
     return response_data["result"]
 
 
 def tg_handler(data):
+    print(data)  # debug
     if "message" in data:
         if "text" in data["message"]:
             subtype = "text"
@@ -178,19 +177,17 @@ def tg_handler(data):
     try:
         try:
             tg_request("editMessageMedia", rendered_message)
-        except Exception as e:
-            print(e)
+        except Exception:
             tg_message_id = tg_request(
                 "sendPhoto", {"chat_id": user_tg_id, "photo": wp_id}
             )["message_id"]
-            rendered_message["message_id"] = tg_message_id
-            tg_request("editMessageMedia", rendered_message)
             with Session(engine) as session:
                 user = session.get(User, user_id)
                 user.tg_message_id = tg_message_id
                 session.commit()
-    except Exception as e:
-        print(e)
+            rendered_message["message_id"] = tg_message_id
+            tg_request("editMessageMedia", rendered_message)
+    except Exception:
         return
 
     with Session(engine) as session:

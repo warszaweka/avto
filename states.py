@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sqlalchemy.orm import Session
 
 engine = None
@@ -28,7 +26,7 @@ def main_callback_handler(
         new_state_id not in [ars_id, auction_id, diller_id, client_id]
         or new_state_args
     ):
-        raise Exception
+        raise Exception()
 
 
 def main_show(user_id, new_state_args):
@@ -70,7 +68,7 @@ def ars_callback_handler(
     user_id, current_state_args, new_state_id, new_state_args
 ):
     if new_state_id != main_id or new_state_args:
-        raise Exception
+        raise Exception()
 
 
 def ars_show(user_id, new_state_args):
@@ -94,12 +92,12 @@ def auction_callback_handler(
     user_id, current_state_args, new_state_id, new_state_args
 ):
     if new_state_id != main_id or new_state_args:
-        raise Exception
+        raise Exception()
 
 
 def auction_show(user_id, new_state_args):
     return {
-        "text": "СТО",
+        "text": "Аукцион заявок",
         "keyboard": [
             [
                 {
@@ -118,12 +116,12 @@ def diller_callback_handler(
     user_id, current_state_args, new_state_id, new_state_args
 ):
     if new_state_id != main_id or new_state_args:
-        raise Exception
+        raise Exception()
 
 
 def diller_show(user_id, new_state_args):
     return {
-        "text": "СТО",
+        "text": "Кабинет диллера",
         "keyboard": [
             [
                 {
@@ -142,12 +140,12 @@ def client_callback_handler(
     user_id, current_state_args, new_state_id, new_state_args
 ):
     if new_state_id != main_id or new_state_args:
-        raise Exception
+        raise Exception()
 
 
 def client_show(user_id, new_state_args):
     return {
-        "text": "СТО",
+        "text": "Кабинет клиента",
         "keyboard": [
             [
                 {
