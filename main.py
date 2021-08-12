@@ -22,7 +22,7 @@ from states import (callback_handlers, main_id, message_handlers, set_engine,
                     shows)
 
 engine = create_engine(
-    sub(r"^[^:]*", "postgresql+psycopg2", getenv("DB_URL"), 1)
+    sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1)
 )
 DeclarativeBase.metadata.create_all(engine)
 set_engine(engine)
