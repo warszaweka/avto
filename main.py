@@ -98,7 +98,7 @@ def tg_handler(data):
             tg_message_id = user.tg_message_id
     if not user_exists:
         tg_message_id = tg_request(
-            "sendPhoto", json={"chat_id": user_tg_id, "photo": wp_id}
+            "sendPhoto", {"chat_id": user_tg_id, "photo": wp_id}
         )["result"]["message_id"]
         current_state_id = start_id
         current_state_args = {}
@@ -176,13 +176,13 @@ def tg_handler(data):
             }
     try:
         try:
-            tg_request("editMessageMedia", json=rendered_message)
+            tg_request("editMessageMedia", rendered_message)
         except Exception:
             tg_message_id = tg_request(
-                "sendPhoto", json={"chat_id": user_tg_id, "photo": wp_id}
+                "sendPhoto", {"chat_id": user_tg_id, "photo": wp_id}
             )["result"]["message_id"]
             rendered_message["message_id"] = tg_message_id
-            tg_request("editMessageMedia", json=rendered_message)
+            tg_request("editMessageMedia", rendered_message)
             with Session(engine) as session:
                 user = session.get(User, user_id)
                 user.tg_message_id = tg_message_id
