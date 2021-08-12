@@ -185,7 +185,7 @@ def tg_handler(data):
         except Exception:
             tg_message_id = tg_request(
                 "sendPhoto", {"chat_id": user_tg_id, "photo": wp_id}
-            )["result"]["message_id"]
+            )["message_id"]
             rendered_message["message_id"] = tg_message_id
             tg_request("editMessageMedia", rendered_message)
             with Session(engine) as session:
