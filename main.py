@@ -169,6 +169,8 @@ def tg_handler(data):
                 state_id = new_state_id
             else:
                 state_id = handler_return
+            if "action" in new_state_args:
+                del new_state_args["action"]
             for new_state_arg_key, new_state_arg_val in new_state_args.items():
                 if (
                     new_state_arg_val is None
@@ -189,16 +191,22 @@ def tg_handler(data):
                 user.state_args = state_args
                 session.commit()
 
+    status = ""
+    if "status" in state_args:
+        status = f"{state_args['status']}\n\n"
+        del state_args["status"]
     render_message = shows[state_id](id, state_args)
     rendered_message = {
         "chat_id": tg_id,
         "message_id": tg_message_id,
-        "media": {"type": "photo", "media": wp_id},
+        "media": {
+            "type": "photo",
+            "media": wp_id,
+            "caption": f"{status}{render_message['text']}",
+        },
     }
     if "photo" in render_message and render_message["photo"]:
         rendered_message["media"]["media"] = render_message["photo"]
-    if "text" in render_message and render_message["text"]:
-        rendered_message["media"]["caption"] = render_message["text"]
     if "keyboard" in render_message:
         rendered_keyboard = []
         for render_row in render_message["keyboard"]:
