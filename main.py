@@ -143,21 +143,17 @@ def tg_handler(data):
     render_message = shows[new_state_id](user_id, new_state_args)
     rendered_message = {"chat_id": user_tg_id, "message_id": tg_message_id}
     if "photo" in render_message:
-        rendered_message = {
-            "media": {
-                "type": "photo",
-                "media": render_message["photo"],
-            }
+        rendered_message["media"] = {
+            "type": "photo",
+            "media": render_message["photo"],
         }
         if "text" in render_message:
             rendered_message["media"]["caption"] = render_message["text"]
     else:
-        rendered_message = {
-            "media": {
-                "type": "photo",
-                "media": wp_id,
-                "caption": render_message["text"],
-            }
+        rendered_message["media"] = {
+            "type": "photo",
+            "media": wp_id,
+            "caption": render_message["text"],
         }
     if "keyboard" in render_message:
         rendered_keyboard = []
