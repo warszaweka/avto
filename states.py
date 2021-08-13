@@ -39,7 +39,7 @@ def main_show(id, state_args):
             [
                 {
                     "text": "Кабинет клиента",
-                    "callback": {"state_id": client_id, "state_args": ""},
+                    "callback": {"state_id": client_id, "handler_arg": ""},
                 }
             ],
         ],
@@ -306,9 +306,9 @@ create_ars_input_ars_specs_id = "create_ars_input_ars_specs"
 
 
 def create_ars_input_ars_specs_callback_handler(
-    id, state_args, new_state_id, handler_args
+    id, state_args, new_state_id, handler_arg
 ):
-    if handler_args == "create":
+    if handler_arg == "create":
         with Session(engine) as session:
             ars = Ars(
                 name=state_args["name"],
@@ -352,7 +352,7 @@ def create_ars_input_ars_specs_show(id, state_args):
                     "text": "Продолжить",
                     "callback": {
                         "state_id": diller_id,
-                        "state_args": "create",
+                        "handler_arg": "create",
                     },
                 },
                 {
