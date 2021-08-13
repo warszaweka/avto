@@ -14,14 +14,6 @@ def set_engine(new_engine):
 main_id = "main"
 
 
-def main_callback_handler(id, state_args, new_state_id, new_state_args):
-    if (
-        new_state_id not in [ars_id, auction_id, diller_id, client_id]
-        or new_state_args
-    ):
-        raise Exception()
-
-
 def main_show(id, state_args):
     return {
         "text": "Главное меню",
@@ -29,25 +21,25 @@ def main_show(id, state_args):
             [
                 {
                     "text": "СТО",
-                    "callback": {"state_id": ars_id, "state_args": {}},
+                    "callback": {"state_id": ars_id, "handler_arg": ""},
                 }
             ],
             [
                 {
                     "text": "Аукцион заявок",
-                    "callback": {"state_id": auction_id, "state_args": {}},
+                    "callback": {"state_id": auction_id, "handler_arg": ""},
                 }
             ],
             [
                 {
                     "text": "Кабинет диллера",
-                    "callback": {"state_id": diller_id, "state_args": {}},
+                    "callback": {"state_id": diller_id, "handler_arg": ""},
                 }
             ],
             [
                 {
                     "text": "Кабинет клиента",
-                    "callback": {"state_id": client_id, "state_args": {}},
+                    "callback": {"state_id": client_id, "state_args": ""},
                 }
             ],
         ],
@@ -57,11 +49,6 @@ def main_show(id, state_args):
 ars_id = "ars"
 
 
-def ars_callback_handler(id, state_args, new_state_id, new_state_args):
-    if new_state_id != main_id or new_state_args:
-        raise Exception()
-
-
 def ars_show(id, state_args):
     return {
         "text": "СТО",
@@ -69,7 +56,7 @@ def ars_show(id, state_args):
             [
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": {}},
+                    "callback": {"state_id": main_id, "state_args": ""},
                 }
             ]
         ],
@@ -79,11 +66,6 @@ def ars_show(id, state_args):
 auction_id = "auction"
 
 
-def auction_callback_handler(id, state_args, new_state_id, new_state_args):
-    if new_state_id != main_id or new_state_args:
-        raise Exception()
-
-
 def auction_show(id, state_args):
     return {
         "text": "Аукцион заявок",
@@ -91,7 +73,7 @@ def auction_show(id, state_args):
             [
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": {}},
+                    "callback": {"state_id": main_id, "state_args": ""},
                 }
             ]
         ],
@@ -99,14 +81,6 @@ def auction_show(id, state_args):
 
 
 diller_id = "diller"
-
-
-def diller_callback_handler(id, state_args, new_state_id, new_state_args):
-    if (
-        new_state_id not in [create_ars_input_name_id, main_id]
-        or new_state_args
-    ):
-        raise Exception()
 
 
 def diller_show(id, state_args):
@@ -118,12 +92,12 @@ def diller_show(id, state_args):
                     "text": "Создать СТО",
                     "callback": {
                         "state_id": create_ars_input_name_id,
-                        "state_args": {},
+                        "state_args": "",
                     },
                 },
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": {}},
+                    "callback": {"state_id": main_id, "state_args": ""},
                 },
             ]
         ],
@@ -143,13 +117,6 @@ def create_ars_input_name_text_handler(id, state_args, content):
     return create_ars_input_name_id
 
 
-def create_ars_input_name_callback_handler(
-    id, state_args, new_state_id, new_state_args
-):
-    if new_state_id != diller_id or new_state_args:
-        raise Exception()
-
-
 def create_ars_input_name_show(id, state_args):
     return {
         "text": "Введите название",
@@ -157,7 +124,7 @@ def create_ars_input_name_show(id, state_args):
             [
                 {
                     "text": "Отменить",
-                    "callback": {"state_id": diller_id, "state_args": {}},
+                    "callback": {"state_id": diller_id, "state_args": ""},
                 }
             ]
         ],
@@ -178,37 +145,26 @@ def create_ars_input_description_text_handler(id, state_args, content):
 
 
 def create_ars_input_description_callback_handler(
-    id, state_args, new_state_id, new_state_args
+    id, state_args, new_state_id, handler_arg
 ):
-    if (
-        new_state_id
-        not in [
-            create_ars_input_name_id,
-            diller_id,
-        ]
-        or new_state_args != {"name": None}
-    ):
-        raise Exception()
+    del state_args["name"]
 
 
 def create_ars_input_description_show(id, state_args):
     return {
-        "text": "Введите название",
+        "text": "Введите описание",
         "keyboard": [
             [
                 {
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_name_id,
-                        "state_args": {"name": None},
+                        "state_args": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {
-                        "state_id": diller_id,
-                        "state_args": {"name": None},
-                    },
+                    "callback": {"state_id": diller_id, "state_args": ""},
                 },
             ]
         ],
@@ -224,17 +180,12 @@ def create_ars_input_photo_photo_handler(id, state_args, content):
 
 
 def create_ars_input_photo_callback_handler(
-    id, state_args, new_state_id, new_state_args
+    id, state_args, new_state_id, handler_arg
 ):
-    if not (
-        new_state_id == crete_ars_input_phone_id
-        and not new_state_args
-        or new_state_id == create_ars_input_description_id
-        and new_state_args == {"description": None}
-        or new_state_id == diller_id
-        and new_state_args == {"name": None, "description": None}
-    ):
-        raise Exception()
+    if new_state_id != create_ars_input_phone_id:
+        del state_args["description"]
+        if new_state_id == diller_id:
+            del state_args["description"]
 
 
 def create_ars_input_photo_show(id, state_args):
@@ -246,22 +197,19 @@ def create_ars_input_photo_show(id, state_args):
                     "text": "Пропустить",
                     "callback": {
                         "state_id": create_ars_input_phone_id,
-                        "state_args": {},
+                        "state_args": "",
                     },
                 },
                 {
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_description_id,
-                        "state_args": {"description": None},
+                        "state_args": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {
-                        "state_id": diller_id,
-                        "state_args": {"name": None, "description": None},
-                    },
+                    "callback": {"state_id": diller_id, "state_args": ""},
                 },
             ]
         ],
@@ -282,16 +230,12 @@ def create_ars_input_phone_text_handler(id, state_args, content):
 
 
 def create_ars_input_phone_callback_handler(
-    id, state_args, new_state_id, new_state_args
+    id, state_args, new_state_id, handler_arg
 ):
-    if not (
-        new_state_id == create_ars_input_photo_id
-        and new_state_args == {"photo": None}
-        or new_state_id == diller_id
-        and new_state_args
-        == {"name": None, "description": None, "photo": None}
-    ):
-        raise Exception()
+    del state_args["photo"]
+    if new_state_id == diller_id:
+        del state_args["name"]
+        del state_args["description"]
 
 
 def create_ars_input_phone_show(id, state_args):
@@ -303,19 +247,12 @@ def create_ars_input_phone_show(id, state_args):
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_photo_id,
-                        "state_args": {"photo": None},
+                        "state_args": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {
-                        "state_id": diller_id,
-                        "state_args": {
-                            "name": None,
-                            "description": None,
-                            "photo": None,
-                        },
-                    },
+                    "callback": {"state_id": diller_id, "state_args": ""},
                 },
             ]
         ],
@@ -335,16 +272,13 @@ def create_ars_input_address_text_handler(id, state_args, content):
 
 
 def create_ars_input_address_callback_handler(
-    id, state_args, new_state_id, new_state_args
+    id, state_args, new_state_id, handler_arg
 ):
-    if not (
-        new_state_id == create_ars_input_phone_id
-        and new_state_args == {"phone": None}
-        or new_state_id == diller_id
-        and new_state_args
-        == {"name": None, "description": None, "photo": None, "phone": None}
-    ):
-        raise Exception()
+    del state_args["phone"]
+    if new_state_id == diller_id:
+        del state_args["name"]
+        del state_args["description"]
+        del state_args["photo"]
 
 
 def create_ars_input_address_show(id, state_args):
@@ -356,20 +290,12 @@ def create_ars_input_address_show(id, state_args):
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_phone_id,
-                        "state_args": {"phone": None},
+                        "state_args": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {
-                        "state_id": diller_id,
-                        "state_args": {
-                            "name": None,
-                            "description": None,
-                            "photo": None,
-                            "phone": None,
-                        },
-                    },
+                    "callback": {"state_id": diller_id, "state_args": ""},
                 },
             ]
         ],
@@ -380,9 +306,9 @@ create_ars_input_ars_specs_id = "create_ars_input_ars_specs"
 
 
 def create_ars_input_ars_specs_callback_handler(
-    id, state_args, new_state_id, new_state_args
+    id, state_args, new_state_id, handler_args
 ):
-    if new_state_id == diller_id and new_state_args == {"action": "create"}:
+    if handler_args == "create":
         with Session(engine) as session:
             ars = Ars(
                 name=state_args["name"],
@@ -407,21 +333,14 @@ def create_ars_input_ars_specs_callback_handler(
                     ars_spec.cost_ceil = ars_spec_dict["cost_ceil"]
                 session.add(ars_spec)
             session.commit()
-    elif not (
-        new_state_id == create_ars_input_address_id
-        and new_state_args == {"address": None, "ars_specs": None}
-        or new_state_id == diller_id
-        and new_state_args
-        == {
-            "name": None,
-            "description": None,
-            "photo": None,
-            "phone": None,
-            "address": None,
-            "ars_specs": None,
-        }
-    ):
-        raise Exception()
+    else:
+        del state_args["address"]
+        del state_args["ars_specs"]
+        if new_state_id == diller_id:
+            del state_args["name"]
+            del state_args["description"]
+            del state_args["photo"]
+            del state_args["phone"]
 
 
 def create_ars_input_ars_specs_show(id, state_args):
@@ -433,28 +352,21 @@ def create_ars_input_ars_specs_show(id, state_args):
                     "text": "Продолжить",
                     "callback": {
                         "state_id": diller_id,
-                        "state_args": {"action": "create"},
+                        "state_args": "create",
                     },
                 },
                 {
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_address_id,
-                        "state_args": {"address": None, "ars_specs": None},
+                        "state_args": "",
                     },
                 },
                 {
                     "text": "Отменить",
                     "callback": {
                         "state_id": diller_id,
-                        "state_args": {
-                            "name": None,
-                            "description": None,
-                            "photo": None,
-                            "phone": None,
-                            "address": None,
-                            "ars_specs": None,
-                        },
+                        "state_args": "",
                     },
                 },
             ]
@@ -465,11 +377,6 @@ def create_ars_input_ars_specs_show(id, state_args):
 client_id = "client"
 
 
-def client_callback_handler(id, state_args, new_state_id, new_state_args):
-    if new_state_id != main_id or new_state_args:
-        raise Exception()
-
-
 def client_show(id, state_args):
     return {
         "text": "Кабинет клиента",
@@ -477,7 +384,7 @@ def client_show(id, state_args):
             [
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": {}},
+                    "callback": {"state_id": main_id, "state_args": ""},
                 }
             ]
         ],
@@ -496,17 +403,11 @@ message_handlers = {
     },
 }
 callback_handlers = {
-    main_id: main_callback_handler,
-    ars_id: ars_callback_handler,
-    auction_id: auction_callback_handler,
-    diller_id: diller_callback_handler,
-    create_ars_input_name_id: create_ars_input_name_callback_handler,
     create_ars_input_description_id: create_ars_input_description_callback_handler,
     create_ars_input_photo_id: create_ars_input_photo_callback_handler,
     create_ars_input_phone_id: create_ars_input_phone_callback_handler,
     create_ars_input_address_id: create_ars_input_address_callback_handler,
     create_ars_input_ars_specs_id: create_ars_input_ars_specs_callback_handler,
-    client_id: client_callback_handler,
 }
 shows = {
     main_id: main_show,

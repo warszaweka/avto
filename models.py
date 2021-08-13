@@ -21,8 +21,22 @@ class User(DeclarativeBase):
     state_id = Column(VARCHAR(STATE_ID_LENGTH), nullable=False)
     state_args = Column(JSONB, nullable=False)
 
+    callbacks = relationship("Callback", back_populates="user")
     arses = relationship("Ars", back_populates="user")
     requests = relationship("Request", back_populates="user")
+
+
+CALLBACK_DATA_LENGTH = 64
+
+
+class Callback(DeclarativeBase):
+    __tablename__ = "callback"
+
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    data = Column(VARCHAR(CALLBACK_DATA_LENGTH), nullable=False)
+    user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
+
+    user = relationship(User, back_populates="callbacks")
 
 
 SPEC_NAME_LENGTH = 32

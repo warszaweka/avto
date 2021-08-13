@@ -17,7 +17,7 @@ from sqlalchemy.future import create_engine
 from sqlalchemy.orm import Session
 from ujson import dumps, loads
 
-from models import DeclarativeBase, User
+from models import Callback, DeclarativeBase, User
 from states import (callback_handlers, main_id, message_handlers, set_engine,
                     shows)
 
@@ -46,6 +46,7 @@ def tg_request(method, data):
 def tg_handler(data):
     handling = True
 
+    start = False
     if "message" in data:
         type = "message"
         tg_id = data["message"]["from"]["id"]
@@ -61,6 +62,9 @@ def tg_handler(data):
         if "text" in data["message"]:
             subtype = "text"
             content = data["message"]["text"]
+
+            if content == "/start":
+                start = True
         elif "photo" in data["message"]:
             subtype = "photo"
             content = data["message"]["photo"][0]["file_id"]
@@ -70,22 +74,11 @@ def tg_handler(data):
         type = "callback"
         tg_id = data["callback_query"]["from"]["id"]
 
-        callback_data = loads(data["callback_query"]["data"])
-        if not (
-            isinstance(callback_data, dict)
-            and "state_id" in callback_data
-            and isinstance(callback_data["state_id"], str)
-            and "state_args" in callback_data
-            and isinstance(callback_data["state_args"], dict)
-        ):
-            return
-        new_state_id = callback_data["state_id"]
-        new_state_args = callback_data["state_args"]
+        callback_data = data["callback_query"]["data"]
     else:
         return
 
     user_exists = False
-
     with Session(engine) as session:
         user = (
             session.execute(select(User).where(User.tg_id == tg_id))
@@ -98,10 +91,11 @@ def tg_handler(data):
             tg_message_id = user.tg_message_id
             state_id = user.state_id
             state_args = user.state_args
+            callbacks_list = []
+            for callback in user.callbacks:
+                callbacks_list.append(callback.data)
 
-    start = False
-    if type == "message" and subtype == "text" and content == "/start":
-        start = True
+    if start:
         if user_exists:
             try:
                 tg_request(
@@ -127,6 +121,7 @@ def tg_handler(data):
             )["message_id"]
             state_id = main_id
             state_args = {}
+            callbacks_list = []
             with Session(engine) as session:
                 user = User(
                     tg_id=tg_id,
@@ -142,7 +137,7 @@ def tg_handler(data):
         return
 
     if handling:
-        false_start = False
+        handled = False
         if (
             type == "message"
             and state_id in message_handlers
@@ -151,51 +146,37 @@ def tg_handler(data):
             handler_return = message_handlers[state_id][subtype](
                 id, state_args, content
             )
-            if handler_return is None:
-                if start:
-                    false_start = True
-                else:
-                    return
-            else:
+            if handler_return is not None:
+                handled = True
                 state_id = handler_return
-        elif type == "callback" and state_id in callback_handlers:
-            print(new_state_id, new_state_args)  # debug
-            try:
+        elif type == "callback" and callback_data in callbacks_list:
+            handled = True
+            new_state_id, handler_arg = callback_data.split(";")
+            if state_id in callback_handlers:
                 handler_return = callback_handlers[state_id](
-                    id, state_args, new_state_id, new_state_args
+                    id, state_args, new_state_id, handler_arg
                 )
-            except Exception:
-                return
-            if handler_return is None:
-                state_id = new_state_id
-            else:
-                state_id = handler_return
-            if "action" in new_state_args:
-                del new_state_args["action"]
-            for new_state_arg_key, new_state_arg_val in new_state_args.items():
-                if (
-                    new_state_arg_val is None
-                    and new_state_arg_key in state_args
-                ):
-                    del state_args[new_state_arg_key]
-                else:
-                    state_args[new_state_arg_key] = new_state_arg_val
-        else:
-            if start:
-                false_start = True
-            else:
-                return
-        if not false_start:
+                if handler_return is not None:
+                    new_state_id = handler_return
+            state_id = new_state_id
+        if not handled and not start:
+            return
+        if handled:
             with Session(engine) as session:
                 user = session.get(User, id)
                 user.state_id = state_id
                 user.state_args = state_args
                 session.commit()
 
+    callbacks_list = []
     status = ""
     if "status" in state_args:
         status = f"{state_args['status']}\n\n"
         del state_args["status"]
+        with Session(engine) as session:
+            user = session.get(User, id)
+            del user.state_args["status"]
+            session.commit()
     render_message = shows[state_id](id, state_args)
     rendered_message = {
         "chat_id": tg_id,
@@ -216,9 +197,11 @@ def tg_handler(data):
                 if "text" in render_button:
                     rendered_button = {"text": render_button["text"]}
                     if "callback" in render_button:
-                        rendered_button["callback_data"] = dumps(
-                            render_button["callback"]
-                        )
+                        rendered_callback_data = f"{render_button['callback']['state_id']};{render_button['callback']['handler_arg']}"
+                        rendered_button[
+                            "callback_data"
+                        ] = rendered_callback_data
+                        callbacks_list.append(rendered_callback_data)
                     else:
                         rendered_button["url"] = render_button["url"]
                     rendered_row.append(rendered_button)
@@ -229,12 +212,19 @@ def tg_handler(data):
                 "inline_keyboard": rendered_keyboard
             }
     tg_request("editMessageMedia", rendered_message)
+    with Session(engine) as session:
+        user = session.get(User, id)
+        for callback in user.callbacks:
+            session.delete(callback)
+        for callback_str in callbacks_list:
+            session.add(Callback(data=callback_str, user_id=id))
+        session.commit()
 
 
-flask: Flask = Flask(__name__)
+flask = Flask(__name__)
 
 
 @flask.post(f"/{getenv('WH_TOKEN')}")
-def flask_handler() -> tuple:
+def flask_handler():
     spawn(tg_handler, request.json)
     return ("", 204)
