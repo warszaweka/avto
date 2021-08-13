@@ -232,7 +232,8 @@ def create_ars_input_phone_text_handler(id, state_args, content):
 def create_ars_input_phone_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
-    del state_args["photo"]
+    if "photo" in state_args:
+        del state_args["photo"]
     if new_state_id == diller_id:
         del state_args["name"]
         del state_args["description"]
@@ -278,7 +279,8 @@ def create_ars_input_address_callback_handler(
     if new_state_id == diller_id:
         del state_args["name"]
         del state_args["description"]
-        del state_args["photo"]
+        if "photo" in state_args:
+            del state_args["photo"]
 
 
 def create_ars_input_address_show(id, state_args):
@@ -339,7 +341,8 @@ def create_ars_input_ars_specs_callback_handler(
         if new_state_id == diller_id:
             del state_args["name"]
             del state_args["description"]
-            del state_args["photo"]
+            if "photo" in state_args:
+                del state_args["photo"]
             del state_args["phone"]
 
 
