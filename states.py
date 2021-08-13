@@ -484,12 +484,28 @@ def client_show(id, state_args):
     }
 
 
-message_handlers = {}
+message_handlers = {
+    create_ars_input_name_id: {"text": create_ars_input_name_text_handler},
+    create_ars_input_description_id: {
+        "text": create_ars_input_description_text_handler
+    },
+    create_ars_input_photo_id: {"photo": create_ars_input_photo_photo_handler},
+    create_ars_input_phone_id: {"text": create_ars_input_phone_text_handler},
+    create_ars_input_address_id: {
+        "text": create_ars_input_address_text_handler
+    },
+}
 callback_handlers = {
     main_id: main_callback_handler,
     ars_id: ars_callback_handler,
     auction_id: auction_callback_handler,
     diller_id: diller_callback_handler,
+    create_ars_input_name_id: create_ars_input_name_callback_handler,
+    create_ars_input_description_id: create_ars_input_description_callback_handler,
+    create_ars_input_photo_id: create_ars_input_photo_callback_handler,
+    create_ars_input_phone_id: create_ars_input_phone_callback_handler,
+    create_ars_input_address_id: create_ars_input_address_callback_handler,
+    create_ars_input_ars_specs_id: create_ars_input_ars_specs_callback_handler,
     client_id: client_callback_handler,
 }
 shows = {
@@ -497,5 +513,11 @@ shows = {
     ars_id: ars_show,
     auction_id: auction_show,
     diller_id: diller_show,
+    create_ars_input_name_id: create_ars_input_name_show,
+    create_ars_input_description_id: create_ars_input_description_show,
+    create_ars_input_photo_id: create_ars_input_photo_show,
+    create_ars_input_phone_id: create_ars_input_phone_show,
+    create_ars_input_address_id: create_ars_input_address_show,
+    create_ars_input_ars_specs_id: create_ars_input_ars_specs_show,
     client_id: client_show,
 }
