@@ -56,7 +56,7 @@ def ars_show(id, state_args):
             [
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": ""},
+                    "callback": {"state_id": main_id, "handler_arg": ""},
                 }
             ]
         ],
@@ -73,7 +73,7 @@ def auction_show(id, state_args):
             [
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": ""},
+                    "callback": {"state_id": main_id, "handler_arg": ""},
                 }
             ]
         ],
@@ -92,12 +92,12 @@ def diller_show(id, state_args):
                     "text": "Создать СТО",
                     "callback": {
                         "state_id": create_ars_input_name_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": ""},
+                    "callback": {"state_id": main_id, "handler_arg": ""},
                 },
             ]
         ],
@@ -124,7 +124,7 @@ def create_ars_input_name_show(id, state_args):
             [
                 {
                     "text": "Отменить",
-                    "callback": {"state_id": diller_id, "state_args": ""},
+                    "callback": {"state_id": diller_id, "handler_arg": ""},
                 }
             ]
         ],
@@ -159,12 +159,12 @@ def create_ars_input_description_show(id, state_args):
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_name_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {"state_id": diller_id, "state_args": ""},
+                    "callback": {"state_id": diller_id, "handler_arg": ""},
                 },
             ]
         ],
@@ -197,19 +197,19 @@ def create_ars_input_photo_show(id, state_args):
                     "text": "Пропустить",
                     "callback": {
                         "state_id": create_ars_input_phone_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
                 {
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_description_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {"state_id": diller_id, "state_args": ""},
+                    "callback": {"state_id": diller_id, "handler_arg": ""},
                 },
             ]
         ],
@@ -247,12 +247,12 @@ def create_ars_input_phone_show(id, state_args):
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_photo_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {"state_id": diller_id, "state_args": ""},
+                    "callback": {"state_id": diller_id, "handler_arg": ""},
                 },
             ]
         ],
@@ -290,12 +290,12 @@ def create_ars_input_address_show(id, state_args):
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_phone_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
                 {
                     "text": "Отменить",
-                    "callback": {"state_id": diller_id, "state_args": ""},
+                    "callback": {"state_id": diller_id, "handler_arg": ""},
                 },
             ]
         ],
@@ -359,14 +359,14 @@ def create_ars_input_ars_specs_show(id, state_args):
                     "text": "Назад",
                     "callback": {
                         "state_id": create_ars_input_address_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
                 {
                     "text": "Отменить",
                     "callback": {
                         "state_id": diller_id,
-                        "state_args": "",
+                        "handler_arg": "",
                     },
                 },
             ]
@@ -384,7 +384,7 @@ def client_show(id, state_args):
             [
                 {
                     "text": "Главное меню",
-                    "callback": {"state_id": main_id, "state_args": ""},
+                    "callback": {"state_id": main_id, "handler_arg": ""},
                 }
             ]
         ],
