@@ -464,9 +464,7 @@ def diller_create_ars_input_ars_specs_show(id, state_args):
     }
 
 
-diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id = (
-    "diller_create_ars_input_ars_specs_add_ars_spec_choose_spec"
-)
+diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id = 11
 
 
 def diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_callback_handler(
@@ -519,9 +517,7 @@ def diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_show(
     }
 
 
-diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id = (
-    "diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor"
-)
+diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id = 12
 
 
 def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_text_handler(
@@ -580,9 +576,7 @@ def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_show(
     }
 
 
-diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id = (
-    "diller_create_ars_input_ars_specs_add_ars_spec_input_ceil_floor"
-)
+diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id = 13
 
 
 def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_text_handler(
@@ -648,7 +642,7 @@ def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_show(
     }
 
 
-client_id = 11
+client_id = 14
 
 
 def client_show(id, state_args):
