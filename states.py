@@ -83,7 +83,16 @@ def auction_show(id, state_args):
 diller_id = "diller"
 
 
+def diller_callback_handler(id, state_args, new_state_id, handler_arg):
+    if new_state_id == diller_ars_id:
+        state_args["id"] = int(handler_arg)
+
+
 def diller_show(id, state_args):
+    with Session(engine) as session:
+        arses_list = []
+        for ars in session.get(User, id).arses:
+            arses_list.append({"id": ars.id, "name": ars.name})
     return {
         "text": "Кабинет диллера",
         "keyboard": [
@@ -91,7 +100,7 @@ def diller_show(id, state_args):
                 {
                     "text": "Создать СТО",
                     "callback": {
-                        "state_id": create_ars_input_name_id,
+                        "state_id": diller_create_ars_input_name_id,
                         "handler_arg": "",
                     },
                 },
@@ -99,25 +108,91 @@ def diller_show(id, state_args):
                     "text": "Главное меню",
                     "callback": {"state_id": main_id, "handler_arg": ""},
                 },
+            ],
+        ].extend(
+            [
+                [
+                    {
+                        "text": ars_dict["name"],
+                        "callback": {
+                            "state_id": diller_ars_id,
+                            "handler_arg": ars_dict["id"],
+                        },
+                    }
+                ]
+                for ars_dict in arses_list
             ]
-        ],
+        ),
     }
 
 
-create_ars_input_name_id = "create_ars_input_name"
+diller_ars_id = "diller_ars"
 
 
-def create_ars_input_name_text_handler(id, state_args, content):
+def diller_ars_callback_handler(id, state_args, new_state_id, handler_arg):
+    if new_state_id == diller_id:
+        del state_args["id"]
+
+
+def diller_ars_show(id, state_args):
+    with Session(engine) as session:
+        ars = session.get(Ars, state_args["id"])
+        ars_dict = {
+            "name": ars.name,
+            "description": ars.description,
+            "photo": ars.photo,
+            "phone": ars.phone,
+            "address": ars.address,
+            "ars_specs": [
+                {
+                    "spec_name": ars_spec.spec.name,
+                    "cost_floor": ars_spec.cost_floor,
+                    "cost_ceil": ars_spec.cost_ceil,
+                }
+                for ars_spec in ars.ars_specs
+            ],
+        }
+    return {
+        "text": f"Название: {ars_dict['name']}\nОписание: {ars_dict['description']}\nНомер телефона: {ars_dict['phone']}\nАдрес: {ars_dict['address']}",
+        "photo": ars.photo if ars.photo else None,
+        "keyboard": [
+            [
+                {
+                    "text": "Кабинет диллера",
+                    "callback": {"state_id": diller_id, "handler_arg": ""},
+                }
+            ],
+        ].extend(
+            [
+                [
+                    {
+                        "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_florr']} {ars_spec_dict['cost_ceil']}",
+                        "callback": {
+                            "state_id": diller_ars_id,
+                            "handler_arg": "",
+                        },
+                    }
+                ]
+                for ars_spec_dict in ars_dict["ars_specs"]
+            ]
+        ),
+    }
+
+
+diller_create_ars_input_name_id = "diller_create_ars_input_name"
+
+
+def diller_create_ars_input_name_text_handler(id, state_args, content):
     if len(content) <= ARS_NAME_LENGTH:
         state_args["name"] = content
-        return create_ars_input_description_id
+        return diller_create_ars_input_description_id
     state_args[
         "status"
     ] = f"Название должно быть короче или равно {ARS_NAME_LENGTH}"
-    return create_ars_input_name_id
+    return diller_create_ars_input_name_id
 
 
-def create_ars_input_name_show(id, state_args):
+def diller_create_ars_input_name_show(id, state_args):
     return {
         "text": "Введите название",
         "keyboard": [
@@ -131,26 +206,26 @@ def create_ars_input_name_show(id, state_args):
     }
 
 
-create_ars_input_description_id = "create_ars_input_description"
+diller_create_ars_input_description_id = "diller_create_ars_input_description"
 
 
-def create_ars_input_description_text_handler(id, state_args, content):
+def diller_create_ars_input_description_text_handler(id, state_args, content):
     if len(content) <= ARS_DESCRIPTION_LENGTH:
         state_args["description"] = content
-        return create_ars_input_photo_id
+        return diller_create_ars_input_photo_id
     state_args[
         "status"
     ] = f"Описание должно быть короче или равно {ARS_DESCRIPTION_LENGTH}"
-    return create_ars_input_description_id
+    return diller_create_ars_input_description_id
 
 
-def create_ars_input_description_callback_handler(
+def diller_create_ars_input_description_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
     del state_args["name"]
 
 
-def create_ars_input_description_show(id, state_args):
+def diller_create_ars_input_description_show(id, state_args):
     return {
         "text": "Введите описание",
         "keyboard": [
@@ -158,7 +233,7 @@ def create_ars_input_description_show(id, state_args):
                 {
                     "text": "Назад",
                     "callback": {
-                        "state_id": create_ars_input_name_id,
+                        "state_id": diller_create_ars_input_name_id,
                         "handler_arg": "",
                     },
                 },
@@ -171,24 +246,24 @@ def create_ars_input_description_show(id, state_args):
     }
 
 
-create_ars_input_photo_id = "create_ars_input_photo"
+diller_create_ars_input_photo_id = "diller_create_ars_input_photo"
 
 
-def create_ars_input_photo_photo_handler(id, state_args, content):
+def diller_create_ars_input_photo_photo_handler(id, state_args, content):
     state_args["photo"] = content
-    return create_ars_input_phone_id
+    return diller_create_ars_input_phone_id
 
 
-def create_ars_input_photo_callback_handler(
+def diller_create_ars_input_photo_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
-    if new_state_id != create_ars_input_phone_id:
+    if new_state_id != diller_create_ars_input_phone_id:
         del state_args["description"]
         if new_state_id == diller_id:
             del state_args["description"]
 
 
-def create_ars_input_photo_show(id, state_args):
+def diller_create_ars_input_photo_show(id, state_args):
     return {
         "text": "Отправьте фотографию",
         "keyboard": [
@@ -196,14 +271,14 @@ def create_ars_input_photo_show(id, state_args):
                 {
                     "text": "Пропустить",
                     "callback": {
-                        "state_id": create_ars_input_phone_id,
+                        "state_id": diller_create_ars_input_phone_id,
                         "handler_arg": "",
                     },
                 },
                 {
                     "text": "Назад",
                     "callback": {
-                        "state_id": create_ars_input_description_id,
+                        "state_id": diller_create_ars_input_description_id,
                         "handler_arg": "",
                     },
                 },
@@ -216,20 +291,20 @@ def create_ars_input_photo_show(id, state_args):
     }
 
 
-create_ars_input_phone_id = "create_ars_input_phone"
+diller_create_ars_input_phone_id = "diller_create_ars_input_phone"
 
 
-def create_ars_input_phone_text_handler(id, state_args, content):
+def diller_create_ars_input_phone_text_handler(id, state_args, content):
     if len(content) <= PHONE_LENGTH:
         state_args["phone"] = content
-        return create_ars_input_address_id
+        return diller_create_ars_input_address_id
     state_args[
         "status"
     ] = f"Номер телефона должен быть короче или равно {PHONE_LENGTH}"
-    return create_ars_input_phone_id
+    return diller_create_ars_input_phone_id
 
 
-def create_ars_input_phone_callback_handler(
+def diller_create_ars_input_phone_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
     if "photo" in state_args:
@@ -239,7 +314,7 @@ def create_ars_input_phone_callback_handler(
         del state_args["description"]
 
 
-def create_ars_input_phone_show(id, state_args):
+def diller_create_ars_input_phone_show(id, state_args):
     return {
         "text": "Введите номер телефона",
         "keyboard": [
@@ -247,7 +322,7 @@ def create_ars_input_phone_show(id, state_args):
                 {
                     "text": "Назад",
                     "callback": {
-                        "state_id": create_ars_input_photo_id,
+                        "state_id": diller_create_ars_input_photo_id,
                         "handler_arg": "",
                     },
                 },
@@ -260,19 +335,19 @@ def create_ars_input_phone_show(id, state_args):
     }
 
 
-create_ars_input_address_id = "create_ars_input_address"
+diller_create_ars_input_address_id = "diller_create_ars_input_address"
 
 
-def create_ars_input_address_text_handler(id, state_args, content):
+def diller_create_ars_input_address_text_handler(id, state_args, content):
     if len(content) <= ARS_ADDRESS_LENGTH:
         state_args["address"] = content
         state_args["ars_specs"] = []
-        return create_ars_input_ars_specs_id
+        return diller_create_ars_input_ars_specs_id
     state_args["status"] = f"Адрес должен быть короче или равно {PHONE_LENGTH}"
-    return create_ars_input_address_id
+    return diller_create_ars_input_address_id
 
 
-def create_ars_input_address_callback_handler(
+def diller_create_ars_input_address_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
     del state_args["phone"]
@@ -283,7 +358,7 @@ def create_ars_input_address_callback_handler(
             del state_args["photo"]
 
 
-def create_ars_input_address_show(id, state_args):
+def diller_create_ars_input_address_show(id, state_args):
     return {
         "text": "Введите адрес",
         "keyboard": [
@@ -291,7 +366,7 @@ def create_ars_input_address_show(id, state_args):
                 {
                     "text": "Назад",
                     "callback": {
-                        "state_id": create_ars_input_phone_id,
+                        "state_id": diller_create_ars_input_phone_id,
                         "handler_arg": "",
                     },
                 },
@@ -304,10 +379,10 @@ def create_ars_input_address_show(id, state_args):
     }
 
 
-create_ars_input_ars_specs_id = "create_ars_input_ars_specs"
+diller_create_ars_input_ars_specs_id = "diller_create_ars_input_ars_specs"
 
 
-def create_ars_input_ars_specs_callback_handler(
+def diller_create_ars_input_ars_specs_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
     if handler_arg == "create":
@@ -335,18 +410,17 @@ def create_ars_input_ars_specs_callback_handler(
                     ars_spec.cost_ceil = ars_spec_dict["cost_ceil"]
                 session.add(ars_spec)
             session.commit()
-    else:
-        del state_args["address"]
-        del state_args["ars_specs"]
-        if new_state_id == diller_id:
-            del state_args["name"]
-            del state_args["description"]
-            if "photo" in state_args:
-                del state_args["photo"]
-            del state_args["phone"]
+    del state_args["address"]
+    del state_args["ars_specs"]
+    if new_state_id == diller_id:
+        del state_args["name"]
+        del state_args["description"]
+        if "photo" in state_args:
+            del state_args["photo"]
+        del state_args["phone"]
 
 
-def create_ars_input_ars_specs_show(id, state_args):
+def diller_create_ars_input_ars_specs_show(id, state_args):
     return {
         "text": "Добавьте специализации",
         "keyboard": [
@@ -361,7 +435,7 @@ def create_ars_input_ars_specs_show(id, state_args):
                 {
                     "text": "Назад",
                     "callback": {
-                        "state_id": create_ars_input_address_id,
+                        "state_id": diller_create_ars_input_address_id,
                         "handler_arg": "",
                     },
                 },
@@ -395,33 +469,39 @@ def client_show(id, state_args):
 
 
 message_handlers = {
-    create_ars_input_name_id: {"text": create_ars_input_name_text_handler},
-    create_ars_input_description_id: {
-        "text": create_ars_input_description_text_handler
+    diller_create_ars_input_name_id: {
+        "text": diller_create_ars_input_name_text_handler
     },
-    create_ars_input_photo_id: {"photo": create_ars_input_photo_photo_handler},
-    create_ars_input_phone_id: {"text": create_ars_input_phone_text_handler},
-    create_ars_input_address_id: {
-        "text": create_ars_input_address_text_handler
+    diller_create_ars_input_description_id: {
+        "text": diller_create_ars_input_description_text_handler
+    },
+    diller_create_ars_input_photo_id: {
+        "photo": diller_create_ars_input_photo_photo_handler
+    },
+    diller_create_ars_input_phone_id: {
+        "text": diller_create_ars_input_phone_text_handler
+    },
+    diller_create_ars_input_address_id: {
+        "text": diller_create_ars_input_address_text_handler
     },
 }
 callback_handlers = {
-    create_ars_input_description_id: create_ars_input_description_callback_handler,
-    create_ars_input_photo_id: create_ars_input_photo_callback_handler,
-    create_ars_input_phone_id: create_ars_input_phone_callback_handler,
-    create_ars_input_address_id: create_ars_input_address_callback_handler,
-    create_ars_input_ars_specs_id: create_ars_input_ars_specs_callback_handler,
+    diller_create_ars_input_description_id: diller_create_ars_input_description_callback_handler,
+    diller_create_ars_input_photo_id: diller_create_ars_input_photo_callback_handler,
+    diller_create_ars_input_phone_id: diller_create_ars_input_phone_callback_handler,
+    diller_create_ars_input_address_id: diller_create_ars_input_address_callback_handler,
+    diller_create_ars_input_ars_specs_id: diller_create_ars_input_ars_specs_callback_handler,
 }
 shows = {
     main_id: main_show,
     ars_id: ars_show,
     auction_id: auction_show,
     diller_id: diller_show,
-    create_ars_input_name_id: create_ars_input_name_show,
-    create_ars_input_description_id: create_ars_input_description_show,
-    create_ars_input_photo_id: create_ars_input_photo_show,
-    create_ars_input_phone_id: create_ars_input_phone_show,
-    create_ars_input_address_id: create_ars_input_address_show,
-    create_ars_input_ars_specs_id: create_ars_input_ars_specs_show,
+    diller_create_ars_input_name_id: diller_create_ars_input_name_show,
+    diller_create_ars_input_description_id: diller_create_ars_input_description_show,
+    diller_create_ars_input_photo_id: diller_create_ars_input_photo_show,
+    diller_create_ars_input_phone_id: diller_create_ars_input_phone_show,
+    diller_create_ars_input_address_id: diller_create_ars_input_address_show,
+    diller_create_ars_input_ars_specs_id: diller_create_ars_input_ars_specs_show,
     client_id: client_show,
 }
