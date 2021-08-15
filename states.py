@@ -134,7 +134,7 @@ def diller_ars_callback_handler(id, state_args, new_state_id, handler_arg):
     if new_state_id == diller_id:
         del state_args["id"]
     else:
-        state_args["spec_id"] = handler
+        state_args["spec_id"] = int(handler_arg)
 
 
 def diller_ars_show(id, state_args):
@@ -421,6 +421,8 @@ diller_create_ars_input_ars_specs_id = 10
 def diller_create_ars_input_ars_specs_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
+    if new_state_id == diller_create_ars_input_ars_specs_id:
+        return
     if (
         new_state_id
         == diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id
@@ -463,6 +465,11 @@ def diller_create_ars_input_ars_specs_callback_handler(
 
 
 def diller_create_ars_input_ars_specs_show(id, state_args):
+    with Session(engine) as session:
+        ars_specs_list = [
+            session.get(Spec, ars_spec_dict["spec_id"]).name
+            for ars_spec_dict in state_args["ars_specs"]
+        ]
     return {
         "text": "Добавьте специализации",
         "keyboard": [
@@ -496,6 +503,18 @@ def diller_create_ars_input_ars_specs_show(id, state_args):
                     },
                 },
             ]
+        ]
+        + [
+            [
+                {
+                    "text": f"{ars_specs_list[ars_spec_id]} {state_args['ars_specs'][ars_spec_id]['cost_floor']} {state_args['ars_specs'][ars_spec_id]['cost_ceil']}",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_id,
+                        "handler_arg": "",
+                    },
+                },
+            ]
+            for ars_spec_id in range(len(state_args["ars_specs"]))
         ],
     }
 
