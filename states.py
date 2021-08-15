@@ -167,7 +167,7 @@ def diller_ars_show(id, state_args):
         + [
             [
                 {
-                    "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_florr']} {ars_spec_dict['cost_ceil']}",
+                    "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_floor']} {ars_spec_dict['cost_ceil']}",
                     "callback": {
                         "state_id": diller_ars_id,
                         "handler_arg": "",
