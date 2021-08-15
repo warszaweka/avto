@@ -133,6 +133,8 @@ diller_ars_id = 4
 def diller_ars_callback_handler(id, state_args, new_state_id, handler_arg):
     if new_state_id == diller_id:
         del state_args["id"]
+    else:
+        state_args["spec_id"] = handler
 
 
 def diller_ars_show(id, state_args):
@@ -146,6 +148,7 @@ def diller_ars_show(id, state_args):
             "address": ars.address,
             "ars_specs": [
                 {
+                    "spec_id": ars_spec.spec.id,
                     "spec_name": ars_spec.spec.name,
                     "cost_floor": ars_spec.cost_floor,
                     "cost_ceil": ars_spec.cost_ceil,
@@ -169,12 +172,45 @@ def diller_ars_show(id, state_args):
                 {
                     "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_floor']} {ars_spec_dict['cost_ceil']}",
                     "callback": {
-                        "state_id": diller_ars_id,
-                        "handler_arg": "",
+                        "state_id": diller_ars_ars_spec_id,
+                        "handler_arg": ars_spec_dict["spec_id"],
                     },
                 }
             ]
             for ars_spec_dict in ars_dict["ars_specs"]
+        ],
+    }
+
+
+diller_ars_ars_spec_id = 20
+
+
+def diller_ars_ars_spec_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    del state_args["spec_id"]
+
+
+def diller_ars_ars_spec_show(id, state_args):
+    with Session(engine) as session:
+        ars_spec = session.get(
+            ArsSpec,
+            {"ars_id": state_args["id"], "spec_id": state_args["spec_id"]},
+        )
+        ars_spec_dict = {
+            "spec_name": ars_spec.spec.name,
+            "cost_floor": ars_spec.cost_floor,
+            "cost_ceil": ars_spec.cost_ceil,
+        }
+    return {
+        "text": f"Название специальности: {ars_spec_dict['spec_name']}\nНижняя цена: {ars_spec_dict['cost_floor']}\nВерхняя цена: {ars_spec_dict['cost_ceil']}",
+        "keyboard": [
+            [
+                {
+                    "text": "Назад",
+                    "callback": {"state_id": diller_ars_id, "handler_arg": ""},
+                }
+            ],
         ],
     }
 
@@ -526,7 +562,7 @@ def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_text_handler
     try:
         state_args["ars_specs"][len(state_args["ars_specs"]) - 1][
             "cost_floor"
-        ] = str(Decimal(content))
+        ] = int(content)
         return (
             diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id
         )
@@ -585,7 +621,7 @@ def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_text_handler(
     try:
         state_args["ars_specs"][len(state_args["ars_specs"]) - 1][
             "cost_ceil"
-        ] = str(Decimal(content))
+        ] = int(content)
         return diller_create_ars_input_ars_specs_id
     except Exception:
         state_args["status"] = "Ошибка"
@@ -685,6 +721,7 @@ message_handlers = {
 callback_handlers = {
     diller_id: diller_callback_handler,
     diller_ars_id: diller_ars_callback_handler,
+    diller_ars_ars_spec_id: diller_ars_ars_spec_callback_handler,
     diller_create_ars_input_description_id: diller_create_ars_input_description_callback_handler,
     diller_create_ars_input_photo_id: diller_create_ars_input_photo_callback_handler,
     diller_create_ars_input_phone_id: diller_create_ars_input_phone_callback_handler,
@@ -700,6 +737,7 @@ shows = {
     auction_id: auction_show,
     diller_id: diller_show,
     diller_ars_id: diller_ars_show,
+    diller_ars_ars_spec_id: diller_ars_ars_spec_show,
     diller_create_ars_input_name_id: diller_create_ars_input_name_show,
     diller_create_ars_input_description_id: diller_create_ars_input_description_show,
     diller_create_ars_input_photo_id: diller_create_ars_input_photo_show,

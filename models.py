@@ -1,6 +1,5 @@
 from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import (BIGINT, BOOLEAN, JSONB, MONEY,
-                                            VARCHAR)
+from sqlalchemy.dialects.postgresql import BIGINT, BOOLEAN, JSONB, VARCHAR
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import Column
 
@@ -77,8 +76,8 @@ class ArsSpec(DeclarativeBase):
 
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
     spec_id = Column(BIGINT, ForeignKey(Spec.id), primary_key=True)
-    cost_floor = Column(MONEY, nullable=False)
-    cost_ceil = Column(MONEY)
+    cost_floor = Column(BIGINT, nullable=False)
+    cost_ceil = Column(BIGINT)
 
     ars = relationship(Ars, back_populates="ars_specs")
     spec = relationship(Spec, back_populates="ars_specs")
@@ -116,8 +115,8 @@ class Offer(DeclarativeBase):
     __tablename__ = "offer"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    cost_floor = Column(MONEY, nullable=False)
-    cost_ceil = Column(MONEY)
+    cost_floor = Column(BIGINT, nullable=False)
+    cost_ceil = Column(BIGINT)
     active = Column(BOOLEAN, nullable=False)
     winner = Column(BOOLEAN, nullable=False)
     ars_id = Column(BIGINT, ForeignKey(Ars.id), nullable=False)
