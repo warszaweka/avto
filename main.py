@@ -151,7 +151,8 @@ def tg_handler(data):
                 state_id = handler_return
         elif type == "callback" and callback_data in callbacks_list:
             handled = True
-            new_state_id, handler_arg = callback_data.split(";")
+            new_state_id, handler_arg = callback_data.split(":")
+            new_state_id = int(new_state_id)
             if state_id in callback_handlers:
                 handler_return = callback_handlers[state_id](
                     id, state_args, new_state_id, handler_arg
@@ -197,7 +198,7 @@ def tg_handler(data):
                 if "text" in render_button:
                     rendered_button = {"text": render_button["text"]}
                     if "callback" in render_button:
-                        rendered_callback_data = f"{render_button['callback']['state_id']};{render_button['callback']['handler_arg']}"
+                        rendered_callback_data = f"{render_button['callback']['state_id']}:{render_button['callback']['handler_arg']}"
                         rendered_button[
                             "callback_data"
                         ] = rendered_callback_data

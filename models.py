@@ -9,8 +9,6 @@ DeclarativeBase = declarative_base()
 PHOTO_LENGTH = 128
 PHONE_LENGTH = 16
 
-STATE_ID_LENGTH = 64
-
 
 class User(DeclarativeBase):
     __tablename__ = "user"
@@ -18,7 +16,7 @@ class User(DeclarativeBase):
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     tg_id = Column(BIGINT, index=True, nullable=False, unique=True)
     tg_message_id = Column(BIGINT, nullable=False)
-    state_id = Column(VARCHAR(STATE_ID_LENGTH), nullable=False)
+    state_id = Column(BIGINT, nullable=False)
     state_args = Column(JSONB, nullable=False)
 
     callbacks = relationship("Callback", back_populates="user")

@@ -13,7 +13,7 @@ def set_engine(new_engine):
     engine = new_engine
 
 
-main_id = "main"
+main_id = 0
 
 
 def main_show(id, state_args):
@@ -48,7 +48,7 @@ def main_show(id, state_args):
     }
 
 
-ars_id = "ars"
+ars_id = 1
 
 
 def ars_show(id, state_args):
@@ -65,7 +65,7 @@ def ars_show(id, state_args):
     }
 
 
-auction_id = "auction"
+auction_id = 2
 
 
 def auction_show(id, state_args):
@@ -82,7 +82,7 @@ def auction_show(id, state_args):
     }
 
 
-diller_id = "diller"
+diller_id = 3
 
 
 def diller_callback_handler(id, state_args, new_state_id, handler_arg):
@@ -127,7 +127,7 @@ def diller_show(id, state_args):
     }
 
 
-diller_ars_id = "diller_ars"
+diller_ars_id = 4
 
 
 def diller_ars_callback_handler(id, state_args, new_state_id, handler_arg):
@@ -179,7 +179,7 @@ def diller_ars_show(id, state_args):
     }
 
 
-diller_create_ars_input_name_id = "diller_create_ars_input_name"
+diller_create_ars_input_name_id = 5
 
 
 def diller_create_ars_input_name_text_handler(id, state_args, content):
@@ -206,7 +206,7 @@ def diller_create_ars_input_name_show(id, state_args):
     }
 
 
-diller_create_ars_input_description_id = "diller_create_ars_input_description"
+diller_create_ars_input_description_id = 6
 
 
 def diller_create_ars_input_description_text_handler(id, state_args, content):
@@ -246,7 +246,7 @@ def diller_create_ars_input_description_show(id, state_args):
     }
 
 
-diller_create_ars_input_photo_id = "diller_create_ars_input_photo"
+diller_create_ars_input_photo_id = 7
 
 
 def diller_create_ars_input_photo_photo_handler(id, state_args, content):
@@ -291,7 +291,7 @@ def diller_create_ars_input_photo_show(id, state_args):
     }
 
 
-diller_create_ars_input_phone_id = "diller_create_ars_input_phone"
+diller_create_ars_input_phone_id = 8
 
 
 def diller_create_ars_input_phone_text_handler(id, state_args, content):
@@ -335,7 +335,7 @@ def diller_create_ars_input_phone_show(id, state_args):
     }
 
 
-diller_create_ars_input_address_id = "diller_create_ars_input_address"
+diller_create_ars_input_address_id = 9
 
 
 def diller_create_ars_input_address_text_handler(id, state_args, content):
@@ -379,7 +379,7 @@ def diller_create_ars_input_address_show(id, state_args):
     }
 
 
-diller_create_ars_input_ars_specs_id = "diller_create_ars_input_ars_specs"
+diller_create_ars_input_ars_specs_id = 10
 
 
 def diller_create_ars_input_ars_specs_callback_handler(
@@ -648,7 +648,7 @@ def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_show(
     }
 
 
-client_id = "client"
+client_id = 11
 
 
 def client_show(id, state_args):
