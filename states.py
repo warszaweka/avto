@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from models import (ARS_ADDRESS_LENGTH, ARS_DESCRIPTION_LENGTH,
-                    ARS_NAME_LENGTH, PHONE_LENGTH, User, Ars, ArsSpec)
+                    ARS_NAME_LENGTH, PHONE_LENGTH, Ars, ArsSpec, User)
 
 engine = None
 
@@ -109,20 +109,19 @@ def diller_show(id, state_args):
                     "callback": {"state_id": main_id, "handler_arg": ""},
                 },
             ],
-        ].extend(
+        ]
+        + [
             [
-                [
-                    {
-                        "text": ars_dict["name"],
-                        "callback": {
-                            "state_id": diller_ars_id,
-                            "handler_arg": ars_dict["id"],
-                        },
-                    }
-                ]
-                for ars_dict in arses_list
+                {
+                    "text": ars_dict["name"],
+                    "callback": {
+                        "state_id": diller_ars_id,
+                        "handler_arg": ars_dict["id"],
+                    },
+                }
             ]
-        ),
+            for ars_dict in arses_list
+        ],
     }
 
 
@@ -162,20 +161,19 @@ def diller_ars_show(id, state_args):
                     "callback": {"state_id": diller_id, "handler_arg": ""},
                 }
             ],
-        ].extend(
+        ]
+        + [
             [
-                [
-                    {
-                        "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_florr']} {ars_spec_dict['cost_ceil']}",
-                        "callback": {
-                            "state_id": diller_ars_id,
-                            "handler_arg": "",
-                        },
-                    }
-                ]
-                for ars_spec_dict in ars_dict["ars_specs"]
+                {
+                    "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_florr']} {ars_spec_dict['cost_ceil']}",
+                    "callback": {
+                        "state_id": diller_ars_id,
+                        "handler_arg": "",
+                    },
+                }
             ]
-        ),
+            for ars_spec_dict in ars_dict["ars_specs"]
+        ],
     }
 
 
