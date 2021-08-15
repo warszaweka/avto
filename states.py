@@ -497,7 +497,7 @@ shows = {
     ars_id: ars_show,
     auction_id: auction_show,
     diller_id: diller_show,
-    diller_ars_id: diller_show,
+    diller_ars_id: diller_ars_show,
     diller_create_ars_input_name_id: diller_create_ars_input_name_show,
     diller_create_ars_input_description_id: diller_create_ars_input_description_show,
     diller_create_ars_input_photo_id: diller_create_ars_input_photo_show,
