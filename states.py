@@ -1,7 +1,9 @@
+from decimal import Decimal
+
 from sqlalchemy.orm import Session
 
 from models import (ARS_ADDRESS_LENGTH, ARS_DESCRIPTION_LENGTH,
-                    ARS_NAME_LENGTH, PHONE_LENGTH, Ars, ArsSpec, User)
+                    ARS_NAME_LENGTH, PHONE_LENGTH, Ars, ArsSpec, Spec, User)
 
 engine = None
 
@@ -383,6 +385,12 @@ diller_create_ars_input_ars_specs_id = "diller_create_ars_input_ars_specs"
 def diller_create_ars_input_ars_specs_callback_handler(
     id, state_args, new_state_id, handler_arg
 ):
+    if (
+        new_state_id
+        == diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id
+    ):
+        state_args["ars_specs"].append({})
+        return
     if handler_arg == "create":
         with Session(engine) as session:
             ars = Ars(
@@ -444,6 +452,197 @@ def diller_create_ars_input_ars_specs_show(id, state_args):
                         "handler_arg": "",
                     },
                 },
+                {
+                    "text": "Добавить",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id,
+                        "handler_arg": "",
+                    },
+                },
+            ]
+        ],
+    }
+
+
+diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id = (
+    "diller_create_ars_input_ars_specs_add_ars_spec_choose_spec"
+)
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if (
+        new_state_id
+        == diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id
+    ):
+        state_args["ars_specs"][len(state_args["ars_specs"]) - 1][
+            "spec_id"
+        ] = int(handler_arg)
+    else:
+        del state_args["ars_specs"][len(state_args["ars_specs"]) - 1]
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_show(
+    id, state_args
+):
+    with Session(engine) as session:
+        specs_list = [
+            {"id": spec.id, "name": spec.name}
+            for spec in session.query(Spec).all()
+        ]
+    return {
+        "text": "Выберите специализацию",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_id,
+                        "handler_arg": "",
+                    },
+                }
+            ],
+        ]
+        + [
+            [
+                {
+                    "text": spec_dict["name"],
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id,
+                        "handler_arg": spec_dict["id"],
+                    },
+                }
+            ]
+            for spec_dict in specs_list
+        ],
+    }
+
+
+diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id = (
+    "diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor"
+)
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_text_handler(
+    id, state_args, content
+):
+    try:
+        state_args["ars_specs"][len(state_args["ars_specs"]) - 1][
+            "cost_floor"
+        ] = str(Decimal(content))
+        return (
+            diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id
+        )
+    except Exception:
+        state_args["status"] = "Ошибка"
+        return (
+            diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id
+        )
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if (
+        new_state_id
+        == diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id
+    ):
+        del state_args["ars_specs"][len(state_args["ars_specs"]) - 1][
+            "spec_id"
+        ]
+    del state_args["ars_specs"][len(state_args["ars_specs"]) - 1]
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_show(
+    id, state_args
+):
+    return {
+        "text": "Введите нижнюю цену",
+        "keyboard": [
+            [
+                {
+                    "text": "Назад",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id,
+                        "handler_arg": "",
+                    },
+                },
+                {
+                    "text": "Отменить",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_id,
+                        "handler_arg": "",
+                    },
+                },
+            ]
+        ],
+    }
+
+
+diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id = (
+    "diller_create_ars_input_ars_specs_add_ars_spec_input_ceil_floor"
+)
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_text_handler(
+    id, state_args, content
+):
+    try:
+        state_args["ars_specs"][len(state_args["ars_specs"]) - 1][
+            "cost_ceil"
+        ] = str(Decimal(content))
+        return diller_create_ars_input_ars_specs_id
+    except Exception:
+        state_args["status"] = "Ошибка"
+        return (
+            diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id
+        )
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if handler_arg != "skip":
+        if (
+            new_state_id
+            == diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id
+        ):
+            del state_args["ars_specs"][len(state_args["ars_specs"]) - 1][
+                "cost_floor"
+            ]
+        else:
+            del state_args["ars_specs"][len(state_args["ars_specs"]) - 1]
+
+
+def diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_show(
+    id, state_args
+):
+    return {
+        "text": "Введите верхнюю цену",
+        "keyboard": [
+            [
+                {
+                    "text": "Пропустить",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_id,
+                        "handler_arg": "skip",
+                    },
+                },
+                {
+                    "text": "Назад",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id,
+                        "handler_arg": "",
+                    },
+                },
+                {
+                    "text": "Отменить",
+                    "callback": {
+                        "state_id": diller_create_ars_input_ars_specs_id,
+                        "handler_arg": "",
+                    },
+                },
             ]
         ],
     }
@@ -482,6 +681,12 @@ message_handlers = {
     diller_create_ars_input_address_id: {
         "text": diller_create_ars_input_address_text_handler
     },
+    diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id: {
+        "text": diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_text_handler
+    },
+    diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id: {
+        "text": diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_text_handler
+    },
 }
 callback_handlers = {
     diller_id: diller_callback_handler,
@@ -491,6 +696,9 @@ callback_handlers = {
     diller_create_ars_input_phone_id: diller_create_ars_input_phone_callback_handler,
     diller_create_ars_input_address_id: diller_create_ars_input_address_callback_handler,
     diller_create_ars_input_ars_specs_id: diller_create_ars_input_ars_specs_callback_handler,
+    diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id: diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_callback_handler,
+    diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id: diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_callback_handler,
+    diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id: diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_callback_handler,
 }
 shows = {
     main_id: main_show,
@@ -504,5 +712,8 @@ shows = {
     diller_create_ars_input_phone_id: diller_create_ars_input_phone_show,
     diller_create_ars_input_address_id: diller_create_ars_input_address_show,
     diller_create_ars_input_ars_specs_id: diller_create_ars_input_ars_specs_show,
+    diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_id: diller_create_ars_input_ars_specs_add_ars_spec_choose_spec_show,
+    diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_id: diller_create_ars_input_ars_specs_add_ars_spec_input_cost_floor_show,
+    diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_id: diller_create_ars_input_ars_specs_add_ars_spec_input_cost_ceil_show,
     client_id: client_show,
 }
