@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from models import (ARS_ADDRESS_LENGTH, ARS_DESCRIPTION_LENGTH,
-                    ARS_NAME_LENGTH, PHONE_LENGTH, Ars, ArsSpec)
+                    ARS_NAME_LENGTH, PHONE_LENGTH, User, Ars, ArsSpec)
 
 engine = None
 
