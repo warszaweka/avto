@@ -17,7 +17,7 @@ class User(DeclarativeBase):
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     tg_id = Column(BIGINT, index=True, nullable=False, unique=True)
     tg_message_id = Column(BIGINT, nullable=False)
-    state_id = Column(BIGINT, nullable=False)
+    state_id = Column(VARCHAR(48), nullable=False)
     state_args = Column(JSONB, nullable=False)
 
     callbacks = relationship("Callback", back_populates="user")
