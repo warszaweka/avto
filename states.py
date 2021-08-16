@@ -856,7 +856,6 @@ callback_handlers = {
     create_ars_spec_input_cost_floor_id: create_ars_spec_input_cost_floor_callback_handler,
     create_ars_spec_input_cost_ceil_id: create_ars_spec_input_cost_ceil_callback_handler,
     diller_ars_spec_id: diller_ars_spec_callback_handler,
-    update_ars_spec_input_cost_floor_id: update_ars_spec_input_cost_floor_callback_handler,
     update_ars_spec_input_cost_ceil_id: update_ars_spec_input_cost_ceil_callback_handler,
 }
 shows = {
