@@ -156,7 +156,7 @@ def tg_handler(data):
             if ":" in callback_data:
                 new_state_id, handler_arg = callback_data.split(":")
             else:
-                new_stat_id = callback_data
+                new_state_id = callback_data
             new_state_id = int(new_state_id)
             if state_id in callback_handlers:
                 handler_return = callback_handlers[state_id](
