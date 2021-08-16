@@ -494,7 +494,7 @@ def diller_ars_specs_show(id, state_args):
         + [
             [
                 {
-                    "text": f"{ars_spec_dict['name']} {ars_spec_dict['cost_floor']} {ars_spec_dict['cost_ceil']}",
+                    "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_floor']} {ars_spec_dict['cost_ceil']}",
                     "callback": {
                         "state_id": diller_ars_spec_id,
                         "handler_arg": ars_spec_dict["spec_id"],
@@ -829,7 +829,7 @@ def diller_ars_vendors_show(id, state_args):
         + [
             [
                 {
-                    "text": ars_vendor_dict["name"],
+                    "text": ars_vendor_dict["vendor_name"],
                     "callback": {
                         "state_id": diller_ars_vendor_id,
                         "handler_arg": ars_vendor_dict["vendor_id"],
