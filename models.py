@@ -64,8 +64,8 @@ class Ars(DeclarativeBase):
     photo = Column(VARCHAR(FILE_LENGTH))
     phone = Column(VARCHAR(PHONE_LENGTH), nullable=False)
     address = Column(VARCHAR(ARS_ADDRESS_LENGTH), nullable=False)
-    latitude = Column(NUMERIC, nullbale=False)
-    longitude = Column(NUMERIC, nullbale=False)
+    latitude = Column(NUMERIC, nullable=False)
+    longitude = Column(NUMERIC, nullable=False)
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
 
     user = relationship(User, back_populates="arses")
