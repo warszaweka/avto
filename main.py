@@ -15,11 +15,11 @@ from requests import post
 from sqlalchemy import select
 from sqlalchemy.future import create_engine
 from sqlalchemy.orm import Session
-from ujson import dumps, loads
 
 from models import Callback, DeclarativeBase, User
 from states import (callback_handlers, main_id, message_handlers, set_engine,
                     shows)
+from utils import set_nv_key
 
 engine = create_engine(
     sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1)
@@ -31,16 +31,17 @@ tg_token = getenv("TG_TOKEN")
 
 wp_id = getenv("WP_ID")
 
+set_nv_key(getenv("NV_KEY"))
+
 
 def tg_request(method, data):
     response = post(
         url=f"https://api.telegram.org/bot{tg_token}/{method}",
         json=data,
-    )
-    response_data = response.json()
-    if not response_data["ok"]:
-        raise Exception(response_data["description"])
-    return response_data["result"]
+    ).json()
+    if not response["ok"]:
+        raise Exception(response["description"])
+    return response["result"]
 
 
 def tg_handler(data):
@@ -151,7 +152,11 @@ def tg_handler(data):
                 state_id = handler_return
         elif type == "callback" and callback_data in callbacks_list:
             handled = True
-            new_state_id, handler_arg = callback_data.split(":")
+            handler_arg = None
+            if ":" in callback_data:
+                new_state_id, handler_arg = callback_data.split(":")
+            else:
+                new_stat_id = callback_data
             new_state_id = int(new_state_id)
             if state_id in callback_handlers:
                 handler_return = callback_handlers[state_id](
@@ -198,7 +203,12 @@ def tg_handler(data):
                 if "text" in render_button:
                     rendered_button = {"text": render_button["text"]}
                     if "callback" in render_button:
-                        rendered_callback_data = f"{render_button['callback']['state_id']}:{render_button['callback']['handler_arg']}"
+                        if isinstance(render_button["callback"], int):
+                            rendered_callback_data = str(
+                                render_button["callback"]
+                            )
+                        else:
+                            rendered_callback_data = f"{render_button['callback']['state_id']}:{render_button['callback']['handler_arg']}"
                         rendered_button[
                             "callback_data"
                         ] = rendered_callback_data
