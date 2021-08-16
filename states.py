@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from models import (ARS_ADDRESS_LENGTH, ARS_DESCRIPTION_LENGTH,
-                    ARS_NAME_LENGTH, PHONE_LENGTH, Ars)
+                    ARS_NAME_LENGTH, Ars)
 from utils import process_address_input, process_phone_input
 
 engine = None
@@ -54,12 +54,8 @@ def diller_show(id, state_args):
     return {
         "text": "Кабинет диллера",
         "keyboard": [
-            [
-                {"text": "Назад", "callback": main_id},
-            ],
-            [
-                {"text": "СТО", "callback": diller_arses_id},
-            ],
+            [{"text": "Назад", "callback": main_id}],
+            [{"text": "СТО", "callback": diller_arses_id}],
         ],
     }
 
@@ -126,10 +122,8 @@ def create_ars_input_description_show(id, state_args):
     return {
         "text": "Введите описание",
         "keyboard": [
-            [
-                {"text": "Назад", "callback": create_ars_input_name_id},
-                {"text": "Отменить", "callback": diller_arses_id},
-            ]
+            [{"text": "Назад", "callback": create_ars_input_name_id}],
+            [{"text": "Отменить", "callback": diller_arses_id}],
         ],
     }
 
@@ -158,11 +152,9 @@ def create_ars_input_photo_show(id, state_args):
     return {
         "text": "Отправьте фотографию",
         "keyboard": [
-            [
-                {"text": "Назад", "callback": create_ars_input_description_id},
-                {"text": "Пропустить", "callback": create_ars_input_phone_id},
-                {"text": "Отменить", "callback": diller_arses_id},
-            ]
+            [{"text": "Назад", "callback": create_ars_input_description_id}],
+            [{"text": "Пропустить", "callback": create_ars_input_phone_id}],
+            [{"text": "Отменить", "callback": diller_arses_id}],
         ],
     }
 
@@ -188,10 +180,8 @@ def create_ars_input_phone_show(id, state_args):
     return {
         "text": "Введите номер телефона",
         "keyboard": [
-            [
-                {"text": "Назад", "callback": create_ars_input_photo_id},
-                {"text": "Отменить", "callback": diller_arses_id},
-            ]
+            [{"text": "Назад", "callback": create_ars_input_photo_id}],
+            [{"text": "Отменить", "callback": diller_arses_id}],
         ],
     }
 
@@ -223,10 +213,8 @@ def create_ars_input_address_show(id, state_args):
     return {
         "text": "Введите адрес",
         "keyboard": [
-            [
-                {"text": "Назад", "callback": create_ars_input_phone_id},
-                {"text": "Отменить", "callback": diller_arses_id},
-            ]
+            [{"text": "Назад", "callback": create_ars_input_phone_id}],
+            [{"text": "Отменить", "callback": diller_arses_id}],
         ],
     }
 
@@ -269,7 +257,7 @@ def create_ars_input_address_text_handler(id, state_args, content):
             return diller_arses_id
         state_args["status"] = "Неверный адрес"
         return create_ars_input_address_id
-    state_args["status"] = f"Адрес должен быть не длиннее {PHONE_LENGTH}"
+    state_args["status"] = f"Адрес должен быть не длиннее {ARS_ADDRESS_LENGTH}"
     return create_ars_input_address_id
 
 
@@ -292,13 +280,165 @@ def diller_ars_show(id, state_args):
         + f"Номер телефона: {ars_dict['phone']}\n"
         + f"Адрес: {ars_dict['address']}",
         "photo": ars.photo if ars.photo else None,
-        "keyboard": [[{"text": "Назад", "callback": diller_arses_id}]],
+        "keyboard": [
+            [{"text": "Назад", "callback": diller_arses_id}],
+            [
+                {
+                    "text": "Изменить название",
+                    "callback": update_ars_input_name_id,
+                }
+            ],
+            [
+                {
+                    "text": "Изменить описание",
+                    "callback": update_ars_input_description_id,
+                }
+            ],
+            [
+                {
+                    "text": "Изменить фотографию",
+                    "callback": update_ars_input_photo_id,
+                }
+            ],
+            [
+                {
+                    "text": "Изменить номер телефона",
+                    "callback": update_ars_input_phone_id,
+                }
+            ],
+            [
+                {
+                    "text": "Изменить адрес",
+                    "callback": update_ars_input_address_id,
+                }
+            ],
+            [
+                {
+                    "text": "Удалить",
+                    "callback": {
+                        "state_id": diller_arses_id,
+                        "handler_arg": "delete",
+                    },
+                }
+            ],
+        ],
     }
 
 
 def diller_ars_callback_handler(id, state_args, new_state_id, handler_arg):
     if new_state_id == diller_arses_id:
+        if handler_arg == "delete":
+            with Session(engine) as session:
+                session.delete(session.get(Ars, state_args["id"]))
+                session.commit()
         del state_args["id"]
+
+
+update_ars_input_name_id = 31
+
+
+def update_ars_input_name_show(id, state_args):
+    return {
+        "text": "Введите новое название",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_id}]],
+    }
+
+
+def update_ars_input_name_text_handler(id, state_args, content):
+    if len(content) <= ARS_NAME_LENGTH:
+        with Session(engine) as session:
+            session.get(Ars, state_args["id"]).name = content
+            session.commit()
+        return diller_ars_id
+    state_args["status"] = f"Название должно быть не длиннее {ARS_NAME_LENGTH}"
+    return update_ars_input_name_id
+
+
+update_ars_input_description_id = 32
+
+
+def update_ars_input_description_show(id, state_args):
+    return {
+        "text": "Введите новое описание",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_id}]],
+    }
+
+
+def update_ars_input_description_text_handler(id, state_args, content):
+    if len(content) <= ARS_DESCRIPTION_LENGTH:
+        with Session(engine) as session:
+            session.get(Ars, state_args["id"]).description = content
+            session.commit()
+        return diller_ars_id
+    state_args[
+        "status"
+    ] = f"Описание должно быть не длиннее {ARS_DESCRIPTION_LENGTH}"
+    return update_ars_input_description_id
+
+
+update_ars_input_photo_id = 33
+
+
+def update_ars_input_photo_show(id, state_args):
+    return {
+        "text": "Отпраьте новую фотографию",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_id}]],
+    }
+
+
+def update_ars_input_photo_photo_handler(id, state_args, content):
+    with Session(engine) as session:
+        session.get(Ars, state_args["id"]).photo = content
+        session.commit()
+    return diller_ars_id
+
+
+update_ars_input_phone_id = 34
+
+
+def update_ars_input_phone_show(id, state_args):
+    return {
+        "text": "Введите новый номер телефона",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_id}]],
+    }
+
+
+def update_ars_input_phone_text_handler(id, state_args, content):
+    content = process_phone_input(content)
+    if content is not None:
+        with Session(engine) as session:
+            session.get(Ars, state_args["id"]).phone = content
+            session.commit()
+        return diller_ars_id
+    state_args["status"] = "Неверный номер телефона"
+    return update_ars_input_phone_id
+
+
+update_ars_input_address_id = 35
+
+
+def update_ars_input_address_show(id, state_args):
+    return {
+        "text": "Введите новый адрес",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_id}]],
+    }
+
+
+def update_ars_input_address_text_handler(id, state_args, content):
+    if len(content) <= ARS_ADDRESS_LENGTH:
+        geo = process_address_input(content)
+        if geo is not None:
+            with Session(engine) as session:
+                ars = session.get(Ars, state_args["id"])
+                ars.address = content
+                ars.latitude = geo[0]
+                ars.longitude = geo[1]
+                session.commit()
+            return diller_ars_id
+        state_args["status"] = "Неверный адрес"
+        return update_ars_input_address_id
+    state_args["status"] = f"Адрес должен быть не длиннее {ARS_ADDRESS_LENGTH}"
+    return update_ars_input_address_id
 
 
 client_id = 14
@@ -321,6 +461,15 @@ message_handlers = {
     create_ars_input_address_id: {
         "text": create_ars_input_address_text_handler
     },
+    update_ars_input_name_id: {"text": update_ars_input_name_text_handler},
+    update_ars_input_description_id: {
+        "text": update_ars_input_description_text_handler
+    },
+    update_ars_input_photo_id: {"photo": update_ars_input_photo_photo_handler},
+    update_ars_input_phone_id: {"text": update_ars_input_phone_text_handler},
+    update_ars_input_address_id: {
+        "text": update_ars_input_address_text_handler
+    },
 }
 callback_handlers = {
     diller_arses_id: diller_arses_callback_handler,
@@ -342,5 +491,10 @@ shows = {
     create_ars_input_phone_id: create_ars_input_phone_show,
     create_ars_input_address_id: create_ars_input_address_show,
     diller_ars_id: diller_ars_show,
+    update_ars_input_name_id: update_ars_input_name_show,
+    update_ars_input_description_id: update_ars_input_description_show,
+    update_ars_input_photo_id: update_ars_input_photo_show,
+    update_ars_input_phone_id: update_ars_input_phone_show,
+    update_ars_input_address_id: update_ars_input_address_show,
     client_id: client_show,
 }
