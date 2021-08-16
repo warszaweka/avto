@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from models import (ARS_ADDRESS_LENGTH, ARS_DESCRIPTION_LENGTH,
-                    ARS_NAME_LENGTH, Ars, ArsSpec, Spec)
+                    ARS_NAME_LENGTH, Ars, ArsSpec, ArsVendor, Spec, Vendor)
 from utils import (process_address_input, process_cost_input,
                    process_phone_input)
 
@@ -284,6 +284,7 @@ def diller_ars_show(id, state_args):
         "keyboard": [
             [{"text": "Назад", "callback": diller_arses_id}],
             [{"text": "Специализации СТО", "callback": diller_ars_specs_id}],
+            [{"text": "Вендоры СТО", "callback": diller_ars_vendors_id}],
             [
                 {
                     "text": "Изменить название",
@@ -334,7 +335,7 @@ def diller_ars_callback_handler(id, state_args, new_state_id, handler_arg):
                 session.delete(session.get(Ars, state_args["id"]))
                 session.commit()
         del state_args["id"]
-    elif new_state_id == diller_ars_specs_id:
+    elif new_state_id in [diller_ars_specs_id, diller_ars_vendors_id]:
         state_args["ars_id"] = state_args["id"]
         del state_args["id"]
 
@@ -717,7 +718,6 @@ def diller_ars_spec_callback_handler(
                     )
                 )
                 session.commit()
-            pass
         del state_args["spec_id"]
 
 
@@ -799,6 +799,153 @@ def update_ars_spec_input_cost_ceil_text_handler(id, state_args, content):
         return diller_ars_spec_id
     state_args["status"] = "Неверная цена"
     return update_ars_spec_input_cost_ceil_id
+
+
+diller_ars_vendors_id = 50
+
+
+def diller_ars_vendors_show(id, state_args):
+    with Session(engine) as session:
+        ars_vendors_list = [
+            {
+                "vendor_id": ars_vendor.vendor_id,
+                "vendor_name": ars_vendor.vendor.name,
+            }
+            for ars_vendor in session.query(ArsVendor).where(
+                ArsVendor.ars_id == state_args["ars_id"]
+            )
+        ]
+    return {
+        "text": "Кабинет диллера : Вендоры СТО",
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": diller_ars_id},
+                {
+                    "text": "Создать",
+                    "callback": create_ars_vendor_input_vendor_id,
+                },
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": ars_vendor_dict["name"],
+                    "callback": {
+                        "state_id": diller_ars_vendor_id,
+                        "handler_arg": ars_vendor_dict["vendor_id"],
+                    },
+                }
+            ]
+            for ars_vendor_dict in ars_vendors_list
+        ],
+    }
+
+
+def diller_ars_vendors_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == diller_ars_id:
+        state_args["id"] = state_args["ars_id"]
+        del state_args["ars_id"]
+    elif new_state_id == diller_ars_vendor_id:
+        state_args["vendor_id"] = int(handler_arg)
+
+
+create_ars_vendor_input_vendor_id = 51
+
+
+def create_ars_vendor_input_vendor_show(id, state_args):
+    with Session(engine) as session:
+        vendors_list = [
+            {
+                "id": vendor.id,
+                "name": vendor.name,
+            }
+            for vendor in session.query(Vendor).where(
+                Vendor.id.not_in(
+                    session.query(ArsVendor.vendor_id).where(
+                        ArsVendor.ars_id == state_args["ars_id"]
+                    )
+                )
+            )
+        ]
+    return {
+        "text": "Выберите вендор",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_vendors_id}]]
+        + [
+            [
+                {
+                    "text": vendor_dict["name"],
+                    "callback": {
+                        "state_id": diller_ars_vendors_id,
+                        "handler_arg": vendor_dict["id"],
+                    },
+                }
+            ]
+            for vendor_dict in vendors_list
+        ],
+    }
+
+
+def create_ars_vendor_input_vendor_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == diller_ars_vendors_id and handler_arg is not None:
+        with Session(engine) as session:
+            session.add(
+                ArsVendor(
+                    ars_id=state_args["ars_id"], vendor_id=int(handler_arg)
+                )
+            )
+            session.commit()
+
+
+diller_ars_vendor_id = 52
+
+
+def diller_ars_vendor_show(id, state_args):
+    with Session(engine) as session:
+        ars_vendor_vendor_name = session.get(
+            ArsVendor,
+            {
+                "ars_id": state_args["ars_id"],
+                "vendor_id": state_args["vendor_id"],
+            },
+        ).vendor.name
+    return {
+        "text": f"Название: {ars_vendor_vendor_name}",
+        "keyboard": [
+            [{"text": "Назад", "callback": diller_ars_vendors_id}],
+            [
+                {
+                    "text": "Удалить",
+                    "callback": {
+                        "state_id": diller_ars_vendors_id,
+                        "handler_arg": "delete",
+                    },
+                }
+            ],
+        ],
+    }
+
+
+def diller_ars_vendor_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == diller_ars_vendors_id:
+        if handler_arg == "delete":
+            with Session(engine) as session:
+                session.delete(
+                    session.get(
+                        ArsVendor,
+                        {
+                            "ars_id": state_args["ars_id"],
+                            "vendor_id": state_args["vendor_id"],
+                        },
+                    )
+                )
+                session.commit()
+        del state_args["vendor_id"]
 
 
 client_id = 14
