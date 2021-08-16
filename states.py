@@ -65,7 +65,7 @@ def arses_show(id, state_args):
                     "text": ars_dict["title"],
                     "callback": {
                         "state_id": ars_id,
-                        "handler_arg": ars_dict["id"],
+                        "handler_arg": str(ars_dict["id"]),
                     },
                 }
             ]
