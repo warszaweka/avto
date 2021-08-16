@@ -181,7 +181,7 @@ def tg_handler(data):
         del state_args["status"]
         with Session(engine) as session:
             user = session.get(User, id)
-            del user.state_args["status"]
+            user.state_args = state_args
             session.commit()
     render_message = shows[state_id](id, state_args)
     rendered_message = {
