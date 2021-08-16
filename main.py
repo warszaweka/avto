@@ -16,10 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.future import create_engine
 from sqlalchemy.orm import Session
 
+import states
 from models import Callback, DeclarativeBase, User
-from states import (callback_handlers, main_id, message_handlers, set_engine,
-                    shows)
-from utils import set_nv_key
+from states import main_id, set_engine
+from processors import set_nv_key
 
 engine = create_engine(
     sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1)
@@ -36,7 +36,7 @@ set_nv_key(getenv("NV_KEY"))
 
 def tg_request(method, data):
     response = post(
-        url=f"https://api.telegram.org/bot{tg_token}/{method}",
+        url="https://api.telegram.org/bot" + tg_token + "/" + method,
         json=data,
     ).json()
     if not response["ok"]:
@@ -44,12 +44,16 @@ def tg_request(method, data):
     return response["result"]
 
 
+def add_callback_data(callbacks_list, callback_data):
+    callbacks_list.append(callback_data)
+    return callback_data
+
+
 def tg_handler(data):
     handling = True
 
     start = False
     if "message" in data:
-        type = "message"
         tg_id = data["message"]["from"]["id"]
 
         tg_request(
@@ -61,21 +65,20 @@ def tg_handler(data):
         )
 
         if "text" in data["message"]:
-            subtype = "text"
-            content = data["message"]["text"]
+            type = "text"
+            handler_arg = data["message"]["text"]
 
-            if content == "/start":
+            if handler_arg == "/start":
                 start = True
         elif "photo" in data["message"]:
-            subtype = "photo"
-            content = data["message"]["photo"][0]["file_id"]
+            type = "photo"
+            handler_arg = data["message"]["photo"][0]["file_id"]
         else:
             return
     elif "callback_query" in data:
         type = "callback"
         tg_id = data["callback_query"]["from"]["id"]
-
-        callback_data = data["callback_query"]["data"]
+        handler_arg = data["callback_query"]["data"]
     else:
         return
 
@@ -86,15 +89,14 @@ def tg_handler(data):
             .scalars()
             .first()
         )
-        if user is not None:
+        if user:
             user_exists = True
+
             id = user.id
             tg_message_id = user.tg_message_id
             state_id = user.state_id
             state_args = user.state_args
-            callbacks_list = []
-            for callback in user.callbacks:
-                callbacks_list.append(callback.data)
+            callbacks_list = [callback.data for callback in user.callbacks]
 
     if start:
         if user_exists:
@@ -112,9 +114,9 @@ def tg_handler(data):
                     "sendPhoto", {"chat_id": tg_id, "photo": wp_id}
                 )["message_id"]
                 with Session(engine) as session:
-                    user = session.get(User, id)
-                    user.tg_message_id = tg_message_id
+                    session.get(User, id).tg_message_id = tg_message_id
                     session.commit()
+
                 handling = False
         else:
             tg_message_id = tg_request(
@@ -133,39 +135,32 @@ def tg_handler(data):
                 session.add(user)
                 session.commit()
                 id = user.id
+
             handling = False
     elif not user_exists:
         return
 
     if handling:
         handled = False
-        if (
-            type == "message"
-            and state_id in message_handlers
-            and subtype in message_handlers[state_id]
-        ):
-            handler_return = message_handlers[state_id][subtype](
-                id, state_args, content
-            )
-            if handler_return is not None:
-                handled = True
-                state_id = handler_return
-        elif type == "callback" and callback_data in callbacks_list:
-            handled = True
-            handler_arg = None
-            if ":" in callback_data:
-                new_state_id, handler_arg = callback_data.split(":")
+        handler = getattr(states, state_id + "_" + type, None)
+        if type in ["text", "photo"]:
+            if handler:
+                handler_return = handler(id, state_args, handler_arg)
+                if handler_return:
+                    state_id = handler_return
+                    handled = True
+        elif handler_arg in callbacks_list:
+            if ":" in handler_arg:
+                state_id, handler_arg = handler_arg.split(":")
             else:
-                new_state_id = callback_data
-            new_state_id = int(new_state_id)
-            if state_id in callback_handlers:
-                handler_return = callback_handlers[state_id](
-                    id, state_args, new_state_id, handler_arg
-                )
-                if handler_return is not None:
-                    new_state_id = handler_return
-            state_id = new_state_id
-        if not handled and not start:
+                state_id = handler_arg
+                handler_arg = None
+            if handler:
+                handler_return = handler(id, state_args, state_id, handler_arg)
+                if handler_return:
+                    state_id = handler_return
+            handled = True
+        if not (handled or start):
             return
         if handled:
             with Session(engine) as session:
@@ -174,68 +169,61 @@ def tg_handler(data):
                 user.state_args = state_args
                 session.commit()
 
-    callbacks_list = []
     status = ""
     if "status" in state_args:
-        status = f"{state_args['status']}\n\n"
+        status = state_args["status"] + "\n\n"
         del state_args["status"]
         with Session(engine) as session:
             user = session.get(User, id)
             user.state_args = state_args
             session.commit()
-    render_message = shows[state_id](id, state_args)
+    render_message = getattr(states, state_id + "_show")(id, state_args)
+    callbacks_list = []
     rendered_message = {
         "chat_id": tg_id,
         "message_id": tg_message_id,
         "media": {
             "type": "photo",
-            "media": wp_id,
-            "caption": f"{status}{render_message['text']}",
+            "media": render_message["photo"]
+            if ("photo" in render_message and render_message["photo"])
+            else wp_id,
+            "caption": status + render_message["text"],
+        },
+        "reply_markup": {
+            "inline_keyboard": [],
         },
     }
-    if "photo" in render_message and render_message["photo"]:
-        rendered_message["media"]["media"] = render_message["photo"]
-    if "keyboard" in render_message:
-        rendered_keyboard = []
-        for render_row in render_message["keyboard"]:
-            rendered_row = []
-            for render_button in render_row:
-                if "text" in render_button:
-                    rendered_button = {"text": render_button["text"]}
-                    if "callback" in render_button:
-                        if isinstance(render_button["callback"], int):
-                            rendered_callback_data = str(
-                                render_button["callback"]
-                            )
-                        else:
-                            rendered_callback_data = f"{render_button['callback']['state_id']}:{render_button['callback']['handler_arg']}"
-                        rendered_button[
-                            "callback_data"
-                        ] = rendered_callback_data
-                        callbacks_list.append(rendered_callback_data)
-                    else:
-                        rendered_button["url"] = render_button["url"]
-                    rendered_row.append(rendered_button)
-            if rendered_row:
-                rendered_keyboard.append(rendered_row)
-        if rendered_keyboard:
-            rendered_message["reply_markup"] = {
-                "inline_keyboard": rendered_keyboard
-            }
+    for render_row in render_message["keyboard"]:
+        rendered_row = []
+        for render_button in render_row:
+            callback_data = (
+                render_button["callback"]
+                if isinstance(render_button["callback"], str)
+                else render_button["callback"]["state_id"]
+                + ":"
+                + render_button["callback"]["handler_arg"]
+            )
+            callbacks_list.append(callback_data)
+            rendered_row.append(
+                {"text": render_button["text"], "callback_data": callback_data}
+            )
+        rendered_message["reply_markup"]["inline_keyboard"].append(
+            rendered_row
+        )
     tg_request("editMessageMedia", rendered_message)
     with Session(engine) as session:
         user = session.get(User, id)
         for callback in user.callbacks:
             session.delete(callback)
-        for callback_str in callbacks_list:
-            session.add(Callback(data=callback_str, user_id=id))
+        for callback_data in callbacks_list:
+            session.add(Callback(data=callback_data, user_id=id))
         session.commit()
 
 
 flask = Flask(__name__)
 
 
-@flask.post(f"/{getenv('WH_TOKEN')}")
+@flask.post("/" + getenv("WH_TOKEN"))
 def flask_handler():
     spawn(tg_handler, request.json)
     return ("", 204)

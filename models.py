@@ -6,18 +6,9 @@ from sqlalchemy.schema import Column
 
 DeclarativeBase = declarative_base()
 
-FILE_LENGTH = 128
-PHONE_LENGTH = 10
-CALLBACK_DATA_LENGTH = 64
-SPEC_NAME_LENGTH = 32
-ARS_NAME_LENGTH = 128
-ARS_DESCRIPTION_LENGTH = 2048
-ARS_ADDRESS_LENGTH = 64
-REQUEST_NAME_LENGTH = 128
-REQUEST_DESCRIPTION_LENGTH = 2048
-OFFER_DESCRIPTION_LENGTH = 2048
-VENDOR_NAME_LENGTH = 32
-FEEDBACK_DESCRIPTION_LENGTH = 2048
+TITLE_LENGTH = 128
+DESCRIPTION_LENGTH = 2048
+ADDRESS_LENGTH = 64
 
 
 class User(DeclarativeBase):
@@ -39,7 +30,7 @@ class Callback(DeclarativeBase):
     __tablename__ = "callback"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    data = Column(VARCHAR(CALLBACK_DATA_LENGTH), nullable=False)
+    data = Column(VARCHAR(64), nullable=False)
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
 
     user = relationship(User, back_populates="callbacks")
@@ -49,7 +40,7 @@ class Spec(DeclarativeBase):
     __tablename__ = "spec"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    name = Column(VARCHAR(SPEC_NAME_LENGTH), nullable=False)
+    title = Column(VARCHAR(32), nullable=False)
 
     ars_specs = relationship("ArsSpec", back_populates="spec")
     request_specs = relationship("RequestSpec", back_populates="spec")
@@ -59,13 +50,13 @@ class Ars(DeclarativeBase):
     __tablename__ = "ars"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    name = Column(VARCHAR(ARS_NAME_LENGTH), nullable=False)
-    description = Column(VARCHAR(ARS_DESCRIPTION_LENGTH), nullable=False)
-    photo = Column(VARCHAR(FILE_LENGTH))
-    phone = Column(VARCHAR(PHONE_LENGTH), nullable=False)
-    address = Column(VARCHAR(ARS_ADDRESS_LENGTH), nullable=False)
+    title = Column(VARCHAR(TITLE_LENGTH), nullable=False)
+    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
+    address = Column(VARCHAR(ADDRESS_LENGTH), nullable=False)
     latitude = Column(NUMERIC, nullable=False)
     longitude = Column(NUMERIC, nullable=False)
+    phone = Column(VARCHAR(10), nullable=False)
+    picture = Column(VARCHAR(128))
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
 
     user = relationship(User, back_populates="arses")
@@ -91,10 +82,10 @@ class Request(DeclarativeBase):
     __tablename__ = "request"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    name = Column(VARCHAR(REQUEST_NAME_LENGTH), nullable=False)
-    description = Column(VARCHAR(REQUEST_DESCRIPTION_LENGTH), nullable=False)
-    photo = Column(VARCHAR(FILE_LENGTH))
-    phone = Column(VARCHAR(PHONE_LENGTH), nullable=False)
+    title = Column(VARCHAR(TITLE_LENGTH), nullable=False)
+    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
+    phone = Column(VARCHAR(10), nullable=False)
+    picture = Column(VARCHAR(128))
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
 
     user = relationship(User, back_populates="requests")
@@ -118,7 +109,7 @@ class Offer(DeclarativeBase):
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     cost_floor = Column(BIGINT, nullable=False)
     cost_ceil = Column(BIGINT)
-    description = Column(VARCHAR(OFFER_DESCRIPTION_LENGTH), nullable=False)
+    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
     winner = Column(BOOLEAN, nullable=False)
     ars_id = Column(BIGINT, ForeignKey(Ars.id), nullable=False)
     request_id = Column(BIGINT, ForeignKey(Request.id), nullable=False)
@@ -131,7 +122,7 @@ class Vendor(DeclarativeBase):
     __tablename__ = "vendor"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    name = Column(VARCHAR(VENDOR_NAME_LENGTH), nullable=False)
+    title = Column(VARCHAR(32), nullable=False)
 
     ars_vendors = relationship("ArsVendor", back_populates="vendor")
 
@@ -149,10 +140,11 @@ class ArsVendor(DeclarativeBase):
 class Feedback(DeclarativeBase):
     __tablename__ = "feedback"
 
-    user_id = Column(BIGINT, ForeignKey(User.id), primary_key=True)
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
-    description = Column(VARCHAR(FEEDBACK_DESCRIPTION_LENGTH), nullable=False)
+    user_id = Column(BIGINT, ForeignKey(User.id), primary_key=True)
     stars = Column(SMALLINT, nullable=False)
+    title = Column(VARCHAR(TITLE_LENGTH), nullable=False)
+    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
 
     user = relationship(User, back_populates="feedbacks")
     ars = relationship(Ars, back_populates="feedbacks")
