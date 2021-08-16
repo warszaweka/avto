@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 
 from models import (ARS_ADDRESS_LENGTH, ARS_DESCRIPTION_LENGTH,
-                    ARS_NAME_LENGTH, Ars)
-from utils import process_address_input, process_phone_input
+                    ARS_NAME_LENGTH, Ars, ArsSpec, Spec)
+from utils import (process_address_input, process_cost_input,
+                   process_phone_input)
 
 engine = None
 
@@ -282,6 +283,7 @@ def diller_ars_show(id, state_args):
         "photo": ars.photo if ars.photo else None,
         "keyboard": [
             [{"text": "Назад", "callback": diller_arses_id}],
+            [{"text": "Специализации СТО", "callback": diller_ars_specs_id}],
             [
                 {
                     "text": "Изменить название",
@@ -331,6 +333,9 @@ def diller_ars_callback_handler(id, state_args, new_state_id, handler_arg):
             with Session(engine) as session:
                 session.delete(session.get(Ars, state_args["id"]))
                 session.commit()
+        del state_args["id"]
+    elif new_state_id == diller_ars_specs_id:
+        state_args["ars_id"] = state_args["id"]
         del state_args["id"]
 
 
@@ -382,8 +387,28 @@ update_ars_input_photo_id = 33
 def update_ars_input_photo_show(id, state_args):
     return {
         "text": "Отпраьте новую фотографию",
-        "keyboard": [[{"text": "Отменить", "callback": diller_ars_id}]],
+        "keyboard": [
+            [
+                {
+                    "text": "Пропустить",
+                    "callback": {
+                        "state_id": diller_ars_id,
+                        "handler_arg": "skip",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": diller_ars_id}],
+        ],
     }
+
+
+def update_ars_input_photo_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == diller_ars_id and handler_arg == "skip":
+        with Session(engine) as session:
+            session.get(Ars, state_args["id"]).photo = None
+            session.commit()
 
 
 def update_ars_input_photo_photo_handler(id, state_args, content):
@@ -441,6 +466,341 @@ def update_ars_input_address_text_handler(id, state_args, content):
     return update_ars_input_address_id
 
 
+diller_ars_specs_id = 41
+
+
+def diller_ars_specs_show(id, state_args):
+    with Session(engine) as session:
+        ars_specs_list = [
+            {
+                "spec_id": ars_spec.spec_id,
+                "spec_name": ars_spec.spec.name,
+                "cost_floor": ars_spec.cost_floor,
+                "cost_ceil": ars_spec.cost_ceil,
+            }
+            for ars_spec in session.query(ArsSpec).where(
+                ArsSpec.ars_id == state_args["ars_id"]
+            )
+        ]
+    return {
+        "text": "Кабинет диллера : Специализации СТО",
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": diller_ars_id},
+                {"text": "Создать", "callback": create_ars_spec_input_spec_id},
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": f"{ars_spec_dict['name']} {ars_spec_dict['cost_floor']} {ars_spec_dict['cost_ceil']}",
+                    "callback": {
+                        "state_id": diller_ars_spec_id,
+                        "handler_arg": ars_spec_dict["spec_id"],
+                    },
+                }
+            ]
+            for ars_spec_dict in ars_specs_list
+        ],
+    }
+
+
+def diller_ars_specs_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == diller_ars_id:
+        state_args["id"] = state_args["ars_id"]
+        del state_args["ars_id"]
+    elif new_state_id == diller_ars_spec_id:
+        state_args["spec_id"] = int(handler_arg)
+
+
+create_ars_spec_input_spec_id = 43
+
+
+def create_ars_spec_input_spec_show(id, state_args):
+    with Session(engine) as session:
+        specs_list = [
+            {
+                "id": spec.id,
+                "name": spec.name,
+            }
+            for spec in session.query(Spec).where(
+                Spec.id.not_in(
+                    session.query(ArsSpec.spec_id).where(
+                        ArsSpec.ars_id == state_args["ars_id"]
+                    )
+                )
+            )
+        ]
+    return {
+        "text": "Выберите специализацию",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_specs_id}]]
+        + [
+            [
+                {
+                    "text": spec_dict["name"],
+                    "callback": {
+                        "state_id": create_ars_spec_input_cost_floor_id,
+                        "handler_arg": spec_dict["id"],
+                    },
+                }
+            ]
+            for spec_dict in specs_list
+        ],
+    }
+
+
+def create_ars_spec_input_spec_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == create_ars_spec_input_cost_floor_id:
+        state_args["spec_id"] = int(handler_arg)
+
+
+create_ars_spec_input_cost_floor_id = 44
+
+
+def create_ars_spec_input_cost_floor_show(id, state_args):
+    return {
+        "text": "Введите нижнюю цену",
+        "keyboard": [
+            [{"text": "Назад", "callback": create_ars_spec_input_spec_id}],
+            [{"text": "Отменить", "callback": diller_ars_specs_id}],
+        ],
+    }
+
+
+def create_ars_spec_input_cost_floor_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id in [create_ars_spec_input_spec_id, diller_ars_specs_id]:
+        del state_args["spec_id"]
+
+
+def create_ars_spec_input_cost_floor_text_handler(id, state_args, content):
+    content = process_cost_input(content)
+    if content is not None:
+        state_args["cost_floor"] = content
+        return create_ars_spec_input_cost_ceil_id
+    state_args["status"] = "Неверная цена"
+    return create_ars_spec_input_cost_floor_id
+
+
+create_ars_spec_input_cost_ceil_id = 45
+
+
+def create_ars_spec_input_cost_ceil_show(id, state_args):
+    return {
+        "text": "Введите верхнюю цену",
+        "keyboard": [
+            [
+                {
+                    "text": "Назад",
+                    "callback": create_ars_spec_input_cost_floor_id,
+                }
+            ],
+            [
+                {
+                    "text": "Пропустить",
+                    "callback": {
+                        "state_id": diller_ars_specs_id,
+                        "handler_arg": "skip",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": diller_ars_specs_id}],
+        ],
+    }
+
+
+def create_ars_spec_input_cost_ceil_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id in [
+        create_ars_spec_input_cost_floor_id,
+        diller_ars_specs_id,
+    ]:
+        if handler_arg == "skip":
+            with Session(engine) as session:
+                session.add(
+                    ArsSpec(
+                        ars_id=state_args["ars_id"],
+                        spec_id=state_args["spec_id"],
+                        cost_floor=state_args["cost_floor"],
+                    )
+                )
+                session.commit()
+        del state_args["cost_floor"]
+        if new_state_id == diller_ars_specs_id:
+            del state_args["spec_id"]
+
+
+def create_ars_spec_input_cost_ceil_text_handler(id, state_args, content):
+    content = process_cost_input(content)
+    if content is not None:
+        with Session(engine) as session:
+            session.add(
+                ArsSpec(
+                    ars_id=state_args["ars_id"],
+                    spec_id=state_args["spec_id"],
+                    cost_floor=state_args["cost_floor"],
+                    cost_ceil=content,
+                )
+            )
+            session.commit()
+        del state_args["cost_floor"]
+        del state_args["spec_id"]
+        return diller_ars_specs_id
+    state_args["status"] = "Неверная цена"
+    return create_ars_spec_input_cost_ceil_id
+
+
+diller_ars_spec_id = 42
+
+
+def diller_ars_spec_show(id, state_args):
+    with Session(engine) as session:
+        ars_spec = session.get(
+            ArsSpec,
+            {"ars_id": state_args["ars_id"], "spec_id": state_args["spec_id"]},
+        )
+        ars_spec_dict = {
+            "spec_name": ars_spec.spec.name,
+            "cost_floor": ars_spec.cost_floor,
+            "cost_ceil": ars_spec.cost_ceil,
+        }
+    return {
+        "text": f"Название: {ars_spec_dict['spec_name']}\n"
+        + f"Нижняя цена: {ars_spec_dict['cost_floor']}\n"
+        + f"Верхняя цена: {ars_spec_dict['cost_ceil']}",
+        "keyboard": [
+            [{"text": "Назад", "callback": diller_ars_specs_id}],
+            [
+                {
+                    "text": "Изменить нижнюю цену",
+                    "callback": update_ars_spec_input_cost_floor_id,
+                }
+            ],
+            [
+                {
+                    "text": "Изменить верхнюю цену",
+                    "callback": update_ars_spec_input_cost_ceil_id,
+                }
+            ],
+            [
+                {
+                    "text": "Удалить",
+                    "callback": {
+                        "state_id": diller_ars_specs_id,
+                        "handler_arg": "delete",
+                    },
+                }
+            ],
+        ],
+    }
+
+
+def diller_ars_spec_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == diller_ars_specs_id:
+        if handler_arg == "delete":
+            with Session(engine) as session:
+                session.delete(
+                    session.get(
+                        ArsSpec,
+                        {
+                            "ars_id": state_args["ars_id"],
+                            "spec_id": state_args["spec_id"],
+                        },
+                    )
+                )
+                session.commit()
+            pass
+        del state_args["spec_id"]
+
+
+update_ars_spec_input_cost_floor_id = 46
+
+
+def update_ars_spec_input_cost_floor_show(id, state_args):
+    return {
+        "text": "Введите новую нижнюю цену",
+        "keyboard": [[{"text": "Отменить", "callback": diller_ars_spec_id}]],
+    }
+
+
+def update_ars_spec_input_cost_floor_text_handler(id, state_args, content):
+    content = process_cost_input(content)
+    if content is not None:
+        with Session(engine) as session:
+            session.get(
+                ArsSpec,
+                {
+                    "ars_id": state_args["ars_id"],
+                    "spec_id": state_args["spec_id"],
+                },
+            ).cost_floor = content
+            session.commit()
+        return diller_ars_spec_id
+    state_args["status"] = "Неверная цена"
+    return update_ars_spec_input_cost_floor_id
+
+
+update_ars_spec_input_cost_ceil_id = 47
+
+
+def update_ars_spec_input_cost_ceil_show(id, state_args):
+    return {
+        "text": "Введите новую верхнюю цену",
+        "keyboard": [
+            [
+                {
+                    "text": "Пропустить",
+                    "callback": {
+                        "state_id": diller_ars_spec_id,
+                        "handler_arg": "skip",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": diller_ars_spec_id}],
+        ],
+    }
+
+
+def update_ars_spec_input_cost_ceil_callback_handler(
+    id, state_args, new_state_id, handler_arg
+):
+    if new_state_id == diller_ars_spec_id and handler_arg == "skip":
+        with Session(engine) as session:
+            session.get(
+                ArsSpec,
+                {
+                    "ars_id": state_args["ars_id"],
+                    "spec_id": state_args["spec_id"],
+                },
+            ).cost_ceil = None
+            session.commit()
+
+
+def update_ars_spec_input_cost_ceil_text_handler(id, state_args, content):
+    content = process_cost_input(content)
+    if content is not None:
+        with Session(engine) as session:
+            session.get(
+                ArsSpec,
+                {
+                    "ars_id": state_args["ars_id"],
+                    "spec_id": state_args["spec_id"],
+                },
+            ).cost_ceil = content
+            session.commit()
+        return diller_ars_spec_id
+    state_args["status"] = "Неверная цена"
+    return update_ars_spec_input_cost_ceil_id
+
+
 client_id = 14
 
 
@@ -470,6 +830,18 @@ message_handlers = {
     update_ars_input_address_id: {
         "text": update_ars_input_address_text_handler
     },
+    create_ars_spec_input_cost_floor_id: {
+        "text": create_ars_spec_input_cost_floor_text_handler
+    },
+    create_ars_spec_input_cost_ceil_id: {
+        "text": create_ars_spec_input_cost_ceil_text_handler
+    },
+    update_ars_spec_input_cost_floor_id: {
+        "text": update_ars_spec_input_cost_floor_text_handler
+    },
+    update_ars_spec_input_cost_ceil_id: {
+        "text": update_ars_spec_input_cost_ceil_text_handler
+    },
 }
 callback_handlers = {
     diller_arses_id: diller_arses_callback_handler,
@@ -478,6 +850,14 @@ callback_handlers = {
     create_ars_input_phone_id: create_ars_input_phone_callback_handler,
     create_ars_input_address_id: create_ars_input_address_callback_handler,
     diller_ars_id: diller_ars_callback_handler,
+    update_ars_input_photo_id: update_ars_input_photo_callback_handler,
+    diller_ars_specs_id: diller_ars_specs_callback_handler,
+    create_ars_spec_input_spec_id: create_ars_spec_input_spec_callback_handler,
+    create_ars_spec_input_cost_floor_id: create_ars_spec_input_cost_floor_callback_handler,
+    create_ars_spec_input_cost_ceil_id: create_ars_spec_input_cost_ceil_callback_handler,
+    diller_ars_spec_id: diller_ars_spec_callback_handler,
+    update_ars_spec_input_cost_floor_id: update_ars_spec_input_cost_floor_callback_handler,
+    update_ars_spec_input_cost_ceil_id: update_ars_spec_input_cost_ceil_callback_handler,
 }
 shows = {
     main_id: main_show,
@@ -496,5 +876,12 @@ shows = {
     update_ars_input_photo_id: update_ars_input_photo_show,
     update_ars_input_phone_id: update_ars_input_phone_show,
     update_ars_input_address_id: update_ars_input_address_show,
+    diller_ars_specs_id: diller_ars_specs_show,
+    create_ars_spec_input_spec_id: create_ars_spec_input_spec_show,
+    create_ars_spec_input_cost_floor_id: create_ars_spec_input_cost_floor_show,
+    create_ars_spec_input_cost_ceil_id: create_ars_spec_input_cost_ceil_show,
+    diller_ars_spec_id: diller_ars_spec_show,
+    update_ars_spec_input_cost_floor_id: update_ars_spec_input_cost_floor_show,
+    update_ars_spec_input_cost_ceil_id: update_ars_spec_input_cost_ceil_show,
     client_id: client_show,
 }
