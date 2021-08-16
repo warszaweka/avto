@@ -280,7 +280,7 @@ def diller_ars_show(id, state_args):
         + f"Описание: {ars_dict['description']}\n"
         + f"Номер телефона: {ars_dict['phone']}\n"
         + f"Адрес: {ars_dict['address']}",
-        "photo": ars.photo if ars.photo else None,
+        "photo": ars.photo,
         "keyboard": [
             [{"text": "Назад", "callback": diller_arses_id}],
             [{"text": "Специализации СТО", "callback": diller_ars_specs_id}],
@@ -494,7 +494,7 @@ def diller_ars_specs_show(id, state_args):
         + [
             [
                 {
-                    "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_floor']} {ars_spec_dict['cost_ceil']}",
+                    "text": f"{ars_spec_dict['spec_name']} {ars_spec_dict['cost_floor']} {ars_spec_dict['cost_ceil'] if ars_spec_dict['cost_ceil'] is not None else ''}",
                     "callback": {
                         "state_id": diller_ars_spec_id,
                         "handler_arg": ars_spec_dict["spec_id"],
@@ -674,7 +674,7 @@ def diller_ars_spec_show(id, state_args):
     return {
         "text": f"Название: {ars_spec_dict['spec_name']}\n"
         + f"Нижняя цена: {ars_spec_dict['cost_floor']}\n"
-        + f"Верхняя цена: {ars_spec_dict['cost_ceil']}",
+        + f"Верхняя цена: {ars_spec_dict['cost_ceil'] if ars_spec_dict['cost_ceil'] is not None else ''}",
         "keyboard": [
             [{"text": "Назад", "callback": diller_ars_specs_id}],
             [
