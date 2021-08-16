@@ -1004,6 +1004,9 @@ callback_handlers = {
     create_ars_spec_input_cost_ceil_id: create_ars_spec_input_cost_ceil_callback_handler,
     diller_ars_spec_id: diller_ars_spec_callback_handler,
     update_ars_spec_input_cost_ceil_id: update_ars_spec_input_cost_ceil_callback_handler,
+    diller_ars_vendors_id: diller_ars_vendors_callback_handler,
+    create_ars_vendor_input_vendor_id: create_ars_vendor_input_vendor_callback_handler,
+    diller_ars_vendor_id: diller_ars_vendor_callback_handler,
 }
 shows = {
     main_id: main_show,
@@ -1029,5 +1032,8 @@ shows = {
     diller_ars_spec_id: diller_ars_spec_show,
     update_ars_spec_input_cost_floor_id: update_ars_spec_input_cost_floor_show,
     update_ars_spec_input_cost_ceil_id: update_ars_spec_input_cost_ceil_show,
+    diller_ars_vendors_id: diller_ars_vendors_show,
+    create_ars_vendor_input_vendor_id: create_ars_vendor_input_vendor_show,
+    diller_ars_vendor_id: diller_ars_vendor_show,
     client_id: client_show,
 }
