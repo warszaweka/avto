@@ -668,8 +668,10 @@ def ars_spec_input_cost_ceil_callback(id, state_args, state_id, handler_arg):
 
 def ars_spec_input_cost_ceil_text(id, state_args, handler_arg):
     try:
-        handler_arg = process_cost_input(handler_arg, state_args["cost_floor"])
         if "create" in state_args:
+            handler_arg = process_cost_input(
+                handler_arg, state_args["cost_floor"]
+            )
             with Session(engine) as session:
                 session.add(
                     ArsSpec(
@@ -685,6 +687,15 @@ def ars_spec_input_cost_ceil_text(id, state_args, handler_arg):
             del state_args["create"]
             return ars_specs_id
         else:
+            with Session(engine) as session:
+                ars_spec_cost_floor = session.get(
+                    ArsSpec,
+                    {
+                        "ars_id": state_args["ars_id"],
+                        "spec_id": state_args["spec_id"],
+                    },
+                ).cost_floor
+            handler_arg = process_cost_input(handler_arg, ars_spec_cost_floor)
             with Session(engine) as session:
                 session.get(
                     ArsSpec,
