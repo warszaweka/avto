@@ -87,7 +87,7 @@ ars_input_title_id = "ars_input_title"
 def ars_input_title_show(id, state_args):
     create = "create" in state_args
     return {
-        "text": "Введите название",
+        "text": "Введите " + ("" if create else "новое ") + "название",
         "keyboard": [
             [
                 {
@@ -126,7 +126,7 @@ ars_input_description_id = "ars_input_description"
 def ars_input_description_show(id, state_args):
     create = "create" in state_args
     return {
-        "text": "Введите описание",
+        "text": "Введите " + ("" if create else "новое ") + "описание",
         "keyboard": (
             [[{"text": "Назад", "callback": ars_input_title_id}]]
             if create
@@ -172,7 +172,7 @@ ars_input_address_id = "ars_input_address"
 def ars_input_address_show(id, state_args):
     create = "create" in state_args
     return {
-        "text": "Введите адрес",
+        "text": "Введите " + ("" if create else "новый ") + "адрес",
         "keyboard": (
             [[{"text": "Назад", "callback": ars_input_description_id}]]
             if create
@@ -224,7 +224,7 @@ ars_input_phone_id = "ars_input_phone"
 def ars_input_phone_show(id, state_args):
     create = "create" in state_args
     return {
-        "text": "Введите номер телефона",
+        "text": "Введите " + ("" if create else "новый ") + "номер телефона",
         "keyboard": (
             [[{"text": "Назад", "callback": ars_input_address_id}]]
             if create
@@ -274,7 +274,7 @@ ars_input_picture_id = "ars_input_picture"
 def ars_input_picture_show(id, state_args):
     create = "create" in state_args
     return {
-        "text": "Отправьте фотографию",
+        "text": "Отправьте " + ("" if create else "новую ") + "фотографию",
         "keyboard": (
             [[{"text": "Назад", "callback": ars_input_phone_id}]]
             if create
@@ -560,7 +560,7 @@ ars_spec_input_cost_floor_id = "ars_spec_input_cost_floor"
 def ars_spec_input_cost_floor_show(id, state_args):
     create = "create" in state_args
     return {
-        "text": "Введите нижнюю цену",
+        "text": "Введите " + ("" if create else "новую ") + "нижнюю цену",
         "keyboard": (
             [[{"text": "Назад", "callback": ars_spec_create_spec_id}]]
             if create
@@ -585,11 +585,21 @@ def ars_spec_input_cost_floor_callback(id, state_args, state_id, handler_arg):
 
 def ars_spec_input_cost_floor_text(id, state_args, handler_arg):
     try:
-        handler_arg = process_cost_input(handler_arg)
         if "create" in state_args:
+            handler_arg = process_cost_input(handler_arg)
             state_args["cost_floor"] = handler_arg
             return ars_spec_input_cost_ceil_id
         else:
+            ars_spec_cost_ceil = session.get(
+                ArsSpec,
+                {
+                    "ars_id": state_args["ars_id"],
+                    "spec_id": state_args["spec_id"],
+                },
+            ).cost_ceil
+            handler_arg = process_cost_input(
+                handler_arg, cost_ceil=ars_spec_cost_ceil
+            )
             with Session(engine) as session:
                 session.get(
                     ArsSpec,
@@ -611,7 +621,7 @@ ars_spec_input_cost_ceil_id = "ars_spec_input_cost_ceil"
 def ars_spec_input_cost_ceil_show(id, state_args):
     create = "create" in state_args
     return {
-        "text": "Введите верхнюю цену",
+        "text": "Введите " + ("" if create else "новую ") + "верхнюю цену",
         "keyboard": (
             [[{"text": "Назад", "callback": ars_spec_input_cost_floor_id}]]
             if create
@@ -670,7 +680,7 @@ def ars_spec_input_cost_ceil_text(id, state_args, handler_arg):
     try:
         if "create" in state_args:
             handler_arg = process_cost_input(
-                handler_arg, state_args["cost_floor"]
+                handler_arg, cost_floor=state_args["cost_floor"]
             )
             with Session(engine) as session:
                 session.add(
@@ -695,7 +705,9 @@ def ars_spec_input_cost_ceil_text(id, state_args, handler_arg):
                         "spec_id": state_args["spec_id"],
                     },
                 ).cost_floor
-            handler_arg = process_cost_input(handler_arg, ars_spec_cost_floor)
+            handler_arg = process_cost_input(
+                handler_arg, cost_floor=ars_spec_cost_floor
+            )
             with Session(engine) as session:
                 session.get(
                     ArsSpec,

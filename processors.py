@@ -37,7 +37,7 @@ def process_stars_input(input):
     return input
 
 
-def process_cost_input(input, cost_floor=None):
+def process_cost_input(input, cost_floor=None, cost_ceil=None):
     try:
         input = int(input)
     except Exception:
@@ -46,6 +46,8 @@ def process_cost_input(input, cost_floor=None):
         raise Exception("Число выходит за диапазон [1, 999999]")
     if cost_floor and input <= cost_floor:
         raise Exception("Верхняя граница диапазона не выше нижней границы")
+    elif cost_ceil and input >= cost_ceil:
+        raise Exception("Нижняя граница диапазона не ниже верхней границы")
     return input
 
 
