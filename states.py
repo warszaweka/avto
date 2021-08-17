@@ -396,6 +396,7 @@ def ars_show(id, state_args):
                 },
             ],
             [{"text": "Специализации СТО", "callback": ars_specs_id}],
+            [{"text": "Вендоры СТО", "callback": ars_vendors_id}],
         ]
         + (
             [
@@ -446,7 +447,7 @@ def ars_callback(id, state_args, state_id, handler_arg):
     if state_id == state_args["ars_return"]:
         del state_args["id"]
         del state_args["ars_return"]
-    elif state_id == ars_specs_id:
+    elif state_id in [ars_specs_id, ars_vendors_id]:
         state_args["ars_id"] = state_args["id"]
         del state_args["id"]
 
@@ -1162,6 +1163,193 @@ def ars_spec_delete_callback(id, state_args, state_id, handler_arg):
             )
             session.commit()
         del state_args["spec_id"]
+
+
+ars_vendors_id = "ars_vendors"
+
+
+def ars_vendors_show(id, state_args):
+    with Session(engine) as session:
+        ars_vendors_list = [
+            {
+                "vendor_id": ars_vendor.vendor_id,
+                "vendor_title": ars_vendor.vendor.title,
+            }
+            for ars_vendor in session.query(ArsVendor).where(
+                ArsVendor.ars_id == state_args["ars_id"]
+            )
+        ]
+        admin = id == session.get(Ars, state_args["ars_id"]).user_id
+    return {
+        "text": "Вендоры СТО",
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": ars_id},
+            ]
+            + (
+                [{"text": "Создать", "callback": ars_vendor_create_vendor_id}]
+                if admin
+                else []
+            )
+        ]
+        + [
+            [
+                {
+                    "text": ars_vendor_dict["vendor_title"],
+                    "callback": {
+                        "state_id": ars_vendor_id,
+                        "handler_arg": str(ars_vendor_dict["vendor_id"]),
+                    },
+                }
+            ]
+            for ars_vendor_dict in ars_vendors_list
+        ],
+    }
+
+
+def ars_vendors_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_id:
+        state_args["id"] = state_args["ars_id"]
+        del state_args["ars_id"]
+    if state_id == ars_vendor_id:
+        state_args["vendor_id"] = int(handler_arg)
+
+
+ars_vendor_create_vendor_id = "ars_vendor_create_vendor"
+
+
+def ars_vendor_create_vendor_show(id, state_args):
+    with Session(engine) as session:
+        vendors_list = [
+            {"id": vendor.id, "title": vendor.title}
+            for vendor in session.query(Vendor).where(
+                Vendor.id.not_in(
+                    session.query(ArsVendor.vendor_id).where(
+                        ArsVendor.ars_id == state_args["ars_id"]
+                    )
+                )
+            )
+        ]
+    return {
+        "text": "Выберите вендор",
+        "keyboard": [[{"text": "Отменить", "callback": ars_vendors_id}]]
+        + [
+            [
+                {
+                    "text": vendor_dict["title"],
+                    "callback": {
+                        "state_id": ars_vendor_confirm_id,
+                        "handler_arg": str(vendor_dict["id"]),
+                    },
+                }
+            ]
+            for vendor_dict in vendors_list
+        ],
+    }
+
+
+def ars_vendor_create_vendor_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_vendor_confirm_id:
+        state_args["vendor_id"] = int(handler_arg)
+
+
+ars_vendor_confirm_id = "ars_vendor_confirm"
+
+
+def ars_vendor_confirm_show(id, state_args):
+    with Session(engine) as session:
+        vendor_title = session.get(Vendor, state_args["vendor_id"]).title
+    return {
+        "text": "Подтвердите:\nВендор: " + vendor_title,
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_vendor_create_vendor_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": ars_vendors_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": ars_vendors_id}],
+        ],
+    }
+
+
+def ars_vendor_confirm_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_vendor_create_vendor_id, ars_vendors_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.add(
+                    ArsVendor(
+                        ars_id=state_args["ars_id"],
+                        vendor_id=state_args["vendor_id"],
+                    )
+                )
+                session.commit()
+        del state_args["vendor_id"]
+
+
+ars_vendor_id = "ars_vendor"
+
+
+def ars_vendor_show(id, state_args):
+    with Session(engine) as session:
+        ars_vendor = session.get(
+            ArsVendor,
+            {
+                "ars_id": state_args["ars_id"],
+                "vendor_id": state_args["vendor_id"],
+            },
+        )
+        vendor_title = ars_vendor.vendor.title
+        admin = id == ars_vendor.ars.user_id
+    return {
+        "text": "Вендор: " + vendor_title,
+        "keyboard": [[{"text": "Назад", "callback": ars_vendors_id}]]
+        + (
+            [
+                [{"text": "Удалить", "callback": ars_vendor_delete_id}],
+            ]
+            if admin
+            else []
+        ),
+    }
+
+
+def ars_vendor_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_vendors_id:
+        del state_args["vendor_id"]
+
+
+ars_vendor_delete_id = "ars_vendor_delete"
+
+
+def ars_vendor_delete_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "keyboard": [
+            [{"text": "Подтвердить", "callback": ars_vendors_id}],
+            [{"text": "Отменить", "callback": ars_vendor_id}],
+        ],
+    }
+
+
+def ars_vendor_delete_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_vendors_id:
+        with Session(engine) as session:
+            session.delete(
+                session.get(
+                    ArsVendor,
+                    {
+                        "ars_id": state_args["ars_id"],
+                        "vendor_id": state_args["vendor_id"],
+                    },
+                )
+            )
+            session.commit()
+        del state_args["vendor_id"]
 
 
 requests_id = "requests"
