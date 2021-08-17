@@ -590,13 +590,14 @@ def ars_spec_input_cost_floor_text(id, state_args, handler_arg):
             state_args["cost_floor"] = handler_arg
             return ars_spec_input_cost_ceil_id
         else:
-            ars_spec_cost_ceil = session.get(
-                ArsSpec,
-                {
-                    "ars_id": state_args["ars_id"],
-                    "spec_id": state_args["spec_id"],
-                },
-            ).cost_ceil
+            with Session(engine) as session:
+                ars_spec_cost_ceil = session.get(
+                    ArsSpec,
+                    {
+                        "ars_id": state_args["ars_id"],
+                        "spec_id": state_args["spec_id"],
+                    },
+                ).cost_ceil
             handler_arg = process_cost_input(
                 handler_arg, cost_ceil=ars_spec_cost_ceil
             )
