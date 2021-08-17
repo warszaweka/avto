@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
-from models import Ars, ArsSpec, ArsVendor, Feedback, Spec, Vendor
+from models import (Ars, ArsSpec, ArsVendor, Feedback, Request, RequestSpec,
+                    Spec, Vendor)
 from processors import (process_address_input, process_cost_input,
                         process_description_input, process_phone_input,
                         process_stars_input, process_title_input)
@@ -72,10 +73,40 @@ client_id = "client"
 
 
 def client_show(id, state_args):
+    with Session(engine) as session:
+        requests_list = [
+            {"id": request.id, "title": request.title}
+            for request in session.query(Request).where(Request.user_id == id)
+        ]
     return {
         "text": "Кабинет клиента",
-        "keyboard": [[{"text": "Назад", "callback": main_id}]],
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": main_id},
+                {"text": "Создать", "callback": request_create_title_id},
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": request_dict["title"],
+                    "callback": {
+                        "state_id": request_id,
+                        "handler_arg": str(request_dict["id"]),
+                    },
+                }
+            ]
+            for request_dict in requests_list
+        ],
     }
+
+
+def client_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_id:
+        state_args["request_return"] = client_id
+        state_args["id"] = int(handler_arg)
+    elif state_id == request_create_title_id:
+        state_args["request_create_return"] = client_id
 
 
 arses_id = "arses"
@@ -1805,7 +1836,750 @@ requests_id = "requests"
 
 
 def requests_show(id, state_args):
+    with Session(engine) as session:
+        requests_list = [
+            {"id": request.id, "title": request.title}
+            for request in session.query(Request).all()
+        ]
     return {
         "text": "Аукцион заявок",
-        "keyboard": [[{"text": "Назад", "callback": main_id}]],
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": main_id},
+                {"text": "Создать", "callback": request_create_title_id},
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": request_dict["title"],
+                    "callback": {
+                        "state_id": request_id,
+                        "handler_arg": str(request_dict["id"]),
+                    },
+                }
+            ]
+            for request_dict in requests_list
+        ],
     }
+
+
+def requests_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_id:
+        state_args["request_return"] = requests_id
+        state_args["id"] = int(handler_arg)
+    elif state_id == request_create_title_id:
+        state_args["request_create_return"] = requests_id
+
+
+request_create_title_id = "request_create_title"
+
+
+def request_create_title_show(id, state_args):
+    return {
+        "text": "Введите заголовок",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": state_args["request_create_return"],
+                }
+            ]
+        ],
+    }
+
+
+def request_create_title_callback(id, state_args, state_id, handler_arg):
+    if state_id == state_args["request_create_return"]:
+        del state_args["request_create_return"]
+
+
+def request_create_title_text(id, state_args, handler_arg):
+    try:
+        state_args["title"] = process_title_input(handler_arg)
+        return request_create_description_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return request_create_title_id
+
+
+request_create_description_id = "request_create_description"
+
+
+def request_create_description_show(id, state_args):
+    return {
+        "text": "Введите описание",
+        "keyboard": [
+            [{"text": "Назад", "callback": request_create_title_id}],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": state_args["request_create_return"],
+                }
+            ],
+        ],
+    }
+
+
+def request_create_description_callback(id, state_args, state_id, handler_arg):
+    if state_id in [
+        request_create_title_id,
+        state_args["request_create_return"],
+    ]:
+        del state_args["title"]
+        if state_id == state_args["request_create_return"]:
+            del state_args["request_create_return"]
+
+
+def request_create_description_text(id, state_args, handler_arg):
+    try:
+        state_args["description"] = process_description_input(handler_arg)
+        return request_create_phone_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return request_create_description_id
+
+
+request_create_phone_id = "request_create_phone"
+
+
+def request_create_phone_show(id, state_args):
+    return {
+        "text": "Введите номер телефона",
+        "keyboard": [
+            [{"text": "Назад", "callback": request_create_description_id}],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": state_args["request_create_return"],
+                }
+            ],
+        ],
+    }
+
+
+def request_create_phone_callback(id, state_args, state_id, handler_arg):
+    if state_id in [
+        request_create_description_id,
+        state_args["request_create_return"],
+    ]:
+        del state_args["description"]
+        if state_id == state_args["request_create_return"]:
+            del state_args["title"]
+            del state_args["request_create_return"]
+
+
+def request_create_phone_text(id, state_args, handler_arg):
+    try:
+        state_args["phone"] = process_phone_input(handler_arg)
+        return request_create_picture_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return request_create_phone_id
+
+
+request_create_picture_id = "request_create_picture"
+
+
+def request_create_picture_show(id, state_args):
+    return {
+        "text": "Отправьте фотографию",
+        "keyboard": [
+            [{"text": "Назад", "callback": request_create_phone_id}],
+            [{"text": "Пропустить", "callback": request_confirm_id}],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": state_args["request_create_return"],
+                }
+            ],
+        ],
+    }
+
+
+def request_create_picture_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_confirm_id:
+        state_args["picture"] = None
+    elif state_id in [
+        request_create_phone_id,
+        state_args["request_create_return"],
+    ]:
+        del state_args["phone"]
+        if state_id == state_args["request_create_return"]:
+            del state_args["description"]
+            del state_args["title"]
+            del state_args["request_create_return"]
+
+
+def request_create_picture_photo(id, state_args, handler_arg):
+    state_args["picture"] = process_phone_input(handler_arg)
+    return request_confirm_id
+
+
+request_confirm_id = "request_confirm"
+
+
+def request_confirm_show(id, state_args):
+    return {
+        "text": "Подтвердите:\nЗаголовок: "
+        + state_args["title"]
+        + "\n"
+        + "Описание: "
+        + state_args["description"]
+        + "\n"
+        + "Номер телефона: "
+        + state_args["phone"],
+        "photo": state_args["picture"],
+        "keyboard": [
+            [{"text": "Назад", "callback": request_create_picture_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": state_args["request_create_return"],
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": state_args["request_create_return"],
+                }
+            ],
+        ],
+    }
+
+
+def request_confirm_callback(id, state_args, state_id, handler_arg):
+    if state_id in [
+        request_create_picture_id,
+        state_args["request_create_return"],
+    ]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.add(
+                    Request(
+                        title=state_args["title"],
+                        description=state_args["description"],
+                        phone=state_args["phone"],
+                        picture=state_args["picture"],
+                        user_id=id,
+                    )
+                )
+                session.commit()
+        del state_args["picture"]
+        if state_id == state_args["request_create_return"]:
+            del state_args["phone"]
+            del state_args["description"]
+            del state_args["title"]
+            del state_args["request_create_return"]
+
+
+request_id = "request"
+
+
+def request_show(id, state_args):
+    with Session(engine) as session:
+        request = session.get(Request, state_args["id"])
+        request_dict = {
+            "title": request.title,
+            "description": request.description,
+            "phone": request.phone,
+            "picture": request.picture,
+        }
+        admin = id == request.user_id
+    return {
+        "text": "Заголовок: "
+        + request_dict["title"]
+        + "\n"
+        + "Описание: "
+        + request_dict["description"]
+        + "\n"
+        + "Номер телефона: "
+        + request_dict["phone"],
+        "photo": request_dict["picture"],
+        "keyboard": [
+            [
+                {
+                    "text": "Назад",
+                    "callback": state_args["request_return"],
+                },
+            ],
+            [{"text": "Специализации Заявки", "callback": request_specs_id}],
+        ]
+        + (
+            [
+                [
+                    {
+                        "text": "Изменить заголовок",
+                        "callback": request_edit_title_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить описание",
+                        "callback": request_edit_description_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить номер телефона",
+                        "callback": request_edit_phone_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить фотографию",
+                        "callback": request_edit_picture_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Удалить",
+                        "callback": request_delete_id,
+                    }
+                ],
+            ]
+            if admin
+            else []
+        ),
+    }
+
+
+def request_callback(id, state_args, state_id, handler_arg):
+    if state_id == state_args["request_return"]:
+        del state_args["id"]
+        del state_args["request_return"]
+    elif state_id in [request_specs_id]:
+        state_args["request_id"] = state_args["id"]
+        del state_args["id"]
+
+
+request_edit_title_id = "request_edit_title"
+
+
+def request_edit_title_show(id, state_args):
+    return {
+        "text": "Введите новый заголовок",
+        "keyboard": [[{"text": "Отменить", "callback": request_id}]],
+    }
+
+
+def request_edit_title_text(id, state_args, handler_arg):
+    try:
+        state_args["title"] = process_title_input(handler_arg)
+        return request_confirm_title_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return request_edit_title_id
+
+
+request_confirm_title_id = "request_confirm_title"
+
+
+def request_confirm_title_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["title"],
+        "keyboard": [
+            [{"text": "Назад", "callback": request_edit_title_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": request_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": request_id}],
+        ],
+    }
+
+
+def request_confirm_title_callback(id, state_args, state_id, handler_arg):
+    if state_id in [request_edit_title_id, request_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(Request, state_args["id"]).title = state_args[
+                    "title"
+                ]
+                session.commit()
+        del state_args["title"]
+
+
+request_edit_description_id = "request_edit_description"
+
+
+def request_edit_description_show(id, state_args):
+    return {
+        "text": "Введите новое описание",
+        "keyboard": [[{"text": "Отменить", "callback": request_id}]],
+    }
+
+
+def request_edit_description_text(id, state_args, handler_arg):
+    try:
+        state_args["description"] = process_description_input(handler_arg)
+        return request_confirm_description_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return request_edit_description_id
+
+
+request_confirm_description_id = "request_confirm_description"
+
+
+def request_confirm_description_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["description"],
+        "keyboard": [
+            [{"text": "Назад", "callback": request_edit_description_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": request_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": request_id}],
+        ],
+    }
+
+
+def request_confirm_description_callback(
+    id, state_args, state_id, handler_arg
+):
+    if state_id in [request_edit_description_id, request_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(
+                    Request, state_args["id"]
+                ).description = state_args["description"]
+                session.commit()
+        del state_args["description"]
+
+
+request_edit_phone_id = "request_edit_phone"
+
+
+def request_edit_phone_show(id, state_args):
+    return {
+        "text": "Введите новый номер телефона",
+        "keyboard": [[{"text": "Отменить", "callback": request_id}]],
+    }
+
+
+def request_edit_phone_text(id, state_args, handler_arg):
+    try:
+        state_args["phone"] = process_phone_input(handler_arg)
+        return request_confirm_phone_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return request_edit_phone_id
+
+
+request_confirm_phone_id = "request_confirm_phone"
+
+
+def request_confirm_phone_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["phone"],
+        "keyboard": [
+            [{"text": "Назад", "callback": request_edit_phone_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": request_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": request_id}],
+        ],
+    }
+
+
+def request_confirm_phone_callback(id, state_args, state_id, handler_arg):
+    if state_id in [request_edit_phone_id, request_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(Request, state_args["id"]).phone = state_args[
+                    "phone"
+                ]
+                session.commit()
+        del state_args["phone"]
+
+
+request_edit_picture_id = "request_edit_picture"
+
+
+def request_edit_picture_show(id, state_args):
+    return {
+        "text": "Отправьте новую фотографию",
+        "keyboard": [
+            [{"text": "Пропустить", "callback": request_confirm_picture_id}],
+            [{"text": "Отменить", "callback": request_id}],
+        ],
+    }
+
+
+def request_edit_picture_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_confirm_picture_id:
+        state_args["picture"] = None
+
+
+def request_edit_picture_photo(id, state_args, handler_arg):
+    state_args["picture"] = handler_arg
+    return request_confirm_picture_id
+
+
+request_confirm_picture_id = "request_confirm_picture"
+
+
+def request_confirm_picture_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "photo": state_args["picture"],
+        "keyboard": [
+            [{"text": "Назад", "callback": request_edit_picture_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": request_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": request_id}],
+        ],
+    }
+
+
+def request_confirm_picture_callback(id, state_args, state_id, handler_arg):
+    if state_id in [request_edit_picture_id, request_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(Request, state_args["id"]).picture = state_args[
+                    "picture"
+                ]
+                session.commit()
+        del state_args["picture"]
+
+
+request_delete_id = "request_delete"
+
+
+def request_delete_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "keyboard": [
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": state_args["request_return"],
+                }
+            ],
+            [{"text": "Отменить", "callback": request_id}],
+        ],
+    }
+
+
+def request_delete_callback(id, state_args, state_id, handler_arg):
+    if state_id == state_args["request_return"]:
+        with Session(engine) as session:
+            session.delete(session.get(Request, state_args["id"]))
+            session.commit()
+        del state_args["id"]
+        del state_args["request_return"]
+
+
+request_specs_id = "request_specs"
+
+
+def request_specs_show(id, state_args):
+    with Session(engine) as session:
+        request_specs_list = [
+            {
+                "spec_id": request_spec.spec_id,
+                "spec_title": request_spec.spec.title,
+            }
+            for request_spec in session.query(RequestSpec).where(
+                RequestSpec.request_id == state_args["request_id"]
+            )
+        ]
+        admin = id == session.get(Request, state_args["request_id"]).user_id
+    return {
+        "text": "Специализации заявки",
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": request_id},
+            ]
+            + (
+                [{"text": "Создать", "callback": request_spec_create_spec_id}]
+                if admin
+                else []
+            )
+        ]
+        + [
+            [
+                {
+                    "text": request_spec_dict["spec_title"],
+                    "callback": {
+                        "state_id": request_spec_id,
+                        "handler_arg": str(request_spec_dict["spec_id"]),
+                    },
+                }
+            ]
+            for request_spec_dict in request_specs_list
+        ],
+    }
+
+
+def request_specs_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_id:
+        state_args["id"] = state_args["request_id"]
+        del state_args["request_id"]
+    if state_id == request_spec_id:
+        state_args["spec_id"] = int(handler_arg)
+
+
+request_spec_create_spec_id = "request_spec_create_spec"
+
+
+def request_spec_create_spec_show(id, state_args):
+    with Session(engine) as session:
+        specs_list = [
+            {"id": spec.id, "title": spec.title}
+            for spec in session.query(Spec).where(
+                Spec.id.not_in(
+                    session.query(RequestSpec.spec_id).where(
+                        RequestSpec.request_id == state_args["request_id"]
+                    )
+                )
+            )
+        ]
+    return {
+        "text": "Выберите специализацию",
+        "keyboard": [[{"text": "Отменить", "callback": request_specs_id}]]
+        + [
+            [
+                {
+                    "text": spec_dict["title"],
+                    "callback": {
+                        "state_id": request_spec_confirm_id,
+                        "handler_arg": str(spec_dict["id"]),
+                    },
+                }
+            ]
+            for spec_dict in specs_list
+        ],
+    }
+
+
+def request_spec_create_spec_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_spec_confirm_id:
+        state_args["spec_id"] = int(handler_arg)
+
+
+request_spec_confirm_id = "request_spec_confirm"
+
+
+def request_spec_confirm_show(id, state_args):
+    with Session(engine) as session:
+        spec_title = session.get(Spec, state_args["spec_id"]).title
+    return {
+        "text": "Подтвердите:\nСпециализация: " + spec_title,
+        "keyboard": [
+            [{"text": "Назад", "callback": request_spec_create_spec_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": request_specs_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": request_specs_id}],
+        ],
+    }
+
+
+def request_spec_confirm_callback(id, state_args, state_id, handler_arg):
+    if state_id in [request_spec_create_spec_id, request_specs_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.add(
+                    RequestSpec(
+                        request_id=state_args["request_id"],
+                        spec_id=state_args["spec_id"],
+                    )
+                )
+                session.commit()
+        del state_args["spec_id"]
+
+
+request_spec_id = "request_spec"
+
+
+def request_spec_show(id, state_args):
+    with Session(engine) as session:
+        request_spec = session.get(
+            RequestSpec,
+            {
+                "request_id": state_args["request_id"],
+                "spec_id": state_args["spec_id"],
+            },
+        )
+        spec_title = request_spec.spec.title
+        admin = id == request_spec.request.user_id
+    return {
+        "text": "Специализация: " + spec_title,
+        "keyboard": [[{"text": "Назад", "callback": request_specs_id}]]
+        + (
+            [
+                [{"text": "Удалить", "callback": request_spec_delete_id}],
+            ]
+            if admin
+            else []
+        ),
+    }
+
+
+def request_spec_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_specs_id:
+        del state_args["spec_id"]
+
+
+request_spec_delete_id = "request_spec_delete"
+
+
+def request_spec_delete_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "keyboard": [
+            [{"text": "Подтвердить", "callback": request_specs_id}],
+            [{"text": "Отменить", "callback": request_spec_id}],
+        ],
+    }
+
+
+def request_spec_delete_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_specs_id:
+        with Session(engine) as session:
+            session.delete(
+                session.get(
+                    RequestSpec,
+                    {
+                        "request_id": state_args["request_id"],
+                        "spec_id": state_args["spec_id"],
+                    },
+                )
+            )
+            session.commit()
+        del state_args["spec_id"]
