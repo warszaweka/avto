@@ -81,86 +81,6 @@ def arses_callback(id, state_args, state_id, handler_arg):
         state_args["id"] = int(handler_arg)
 
 
-ars_id = "ars"
-
-
-def ars_show(id, state_args):
-    with Session(engine) as session:
-        ars = session.get(Ars, state_args["id"])
-        ars_dict = {
-            "title": ars.title,
-            "description": ars.description,
-            "address": ars.address,
-            "phone": ars.phone,
-            "picture": ars.picture,
-        }
-    return {
-        "text": "Название: "
-        + ars_dict["title"]
-        + "\n"
-        + "Описание: "
-        + ars_dict["description"]
-        + "\n"
-        + "Адрес: "
-        + ars_dict["address"]
-        + "\n"
-        + "Номер телефона: "
-        + ars_dict["phone"],
-        "photo": ars.picture,
-        "keyboard": [
-            [{"text": "Назад", "callback": arses_id}],
-            [
-                {
-                    "text": "Изменить название",
-                    "callback": ars_input_title_id,
-                }
-            ],
-            [
-                {
-                    "text": "Изменить описание",
-                    "callback": ars_input_description_id,
-                }
-            ],
-            [
-                {
-                    "text": "Изменить адрес",
-                    "callback": ars_input_address_id,
-                }
-            ],
-            [
-                {
-                    "text": "Изменить номер телефона",
-                    "callback": ars_input_phone_id,
-                }
-            ],
-            [
-                {
-                    "text": "Изменить фотографию",
-                    "callback": ars_input_picture_id,
-                }
-            ],
-            [
-                {
-                    "text": "Удалить",
-                    "callback": {
-                        "state_id": arses_id,
-                        "handler_arg": "delete",
-                    },
-                }
-            ],
-        ],
-    }
-
-
-def ars_callback(id, state_args, state_id, handler_arg):
-    if state_id == arses_id:
-        if handler_arg == "delete":
-            with Session(engine) as session:
-                session.delete(session.get(Ars, state_args["id"]))
-                session.commit()
-        del state_args["id"]
-
-
 ars_input_title_id = "ars_input_title"
 
 
@@ -442,6 +362,427 @@ def ars_input_picture_photo(id, state_args, handler_arg):
         return ars_id
 
 
+ars_id = "ars"
+
+
+def ars_show(id, state_args):
+    with Session(engine) as session:
+        ars = session.get(Ars, state_args["id"])
+        ars_dict = {
+            "title": ars.title,
+            "description": ars.description,
+            "address": ars.address,
+            "phone": ars.phone,
+            "picture": ars.picture,
+        }
+        admin = id == ars.user_id
+    return {
+        "text": "Название: "
+        + ars_dict["title"]
+        + "\n"
+        + "Описание: "
+        + ars_dict["description"]
+        + "\n"
+        + "Адрес: "
+        + ars_dict["address"]
+        + "\n"
+        + "Номер телефона: "
+        + ars_dict["phone"],
+        "photo": ars.picture,
+        "keyboard": [
+            [{"text": "Назад", "callback": arses_id}],
+            [{"text": "Специализации СТО", "callback": ars_specs_id}],
+            [{"text": "Вендоры СТО", "callback": ars_vendors_id}],
+            [{"text": "Отзывы", "callback": feedbacks_id}],
+        ]
+        + (
+            [
+                [
+                    {
+                        "text": "Изменить название",
+                        "callback": ars_input_title_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить описание",
+                        "callback": ars_input_description_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить адрес",
+                        "callback": ars_input_address_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить номер телефона",
+                        "callback": ars_input_phone_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить фотографию",
+                        "callback": ars_input_picture_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Удалить",
+                        "callback": {
+                            "state_id": arses_id,
+                            "handler_arg": "delete",
+                        },
+                    }
+                ],
+            ]
+            if admin
+            else []
+        ),
+    }
+
+
+def ars_callback(id, state_args, state_id, handler_arg):
+    if state_id == arses_id:
+        if handler_arg == "delete":
+            with Session(engine) as session:
+                session.delete(session.get(Ars, state_args["id"]))
+                session.commit()
+        del state_args["id"]
+    elif state_id in [ars_specs_id, ars_vendors_id, feedbacks_id]:
+        state_args["ars_id"] = state_args["id"]
+        del state_args["id"]
+
+
+ars_specs_id = "ars_specs"
+
+
+def ars_specs_show(id, state_args):
+    with Session(engine) as session:
+        ars_specs_list = [
+            {
+                "spec_id": ars_spec.spec_id,
+                "spec_title": ars_spec.spec.title,
+                "cost_floor": ars_spec.cost_floor,
+                "cost_ceil": ars_spec.cost_ceil,
+            }
+            for ars_spec in session.query(ArsSpec).where(
+                ArsSpec.ars_id == state_args["ars_id"]
+            )
+        ]
+        admin = id == session.get(Ars, state_args["ars_id"]).user_id
+    return {
+        "text": "Специализации СТО",
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_id}]
+            + (
+                [{"text": "Создать", "callback": ars_spec_create_spec_id}]
+                if admin
+                else []
+            )
+        ]
+        + [
+            [
+                {
+                    "text": ars_spec_dict["spec_title"]
+                    + " "
+                    + ars_spec_dict["cost_floor"]
+                    + (
+                        " " + ars_spec_dict["cost_ceil"]
+                        if ars_spec_dict["cost_ceil"]
+                        else ""
+                    ),
+                    "callback": {
+                        "state_id": ars_spec_id,
+                        "handler_arg": str(ars_spec_dict["spec_id"]),
+                    },
+                }
+            ]
+            for ars_spec_dict in ars_specs_list
+        ],
+    }
+
+
+def ars_specs_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_id:
+        state_args["id"] = state_args["ars_id"]
+        del state_args["ars_id"]
+    elif state_id == ars_spec_id:
+        state_args["spec_id"] = int(handler_arg)
+
+
+ars_spec_create_spec_id = "ars_spec_create_spec"
+
+
+def ars_spec_create_spec_show(id, state_args):
+    with Session(engine) as session:
+        specs_list = [
+            {
+                "id": spec.id,
+                "title": spec.title,
+            }
+            for spec in session.query(Spec).where(
+                Spec.id.not_in(
+                    session.query(ArsSpec.spec_id).where(
+                        ArsSpec.ars_id == state_args["ars_id"]
+                    )
+                )
+            )
+        ]
+    return {
+        "text": "Выберите специализацию",
+        "keyboard": [[{"text": "Отменить", "callback": ars_specs_id}]]
+        + [
+            [
+                {
+                    "text": spec_dict["title"],
+                    "callback": {
+                        "state_id": ars_spec_input_cost_floor_id,
+                        "handler_arg": str(spec_dict["id"]),
+                    },
+                }
+            ]
+            for spec_dict in specs_list
+        ],
+    }
+
+
+def ars_spec_create_spec_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_spec_input_cost_floor_id:
+        state_args["create"] = True
+        state_args["spec_id"] = int(handler_arg)
+
+
+ars_spec_input_cost_floor_id = "ars_spec_input_cost_floor"
+
+
+def ars_spec_input_cost_floor_show(id, state_args):
+    create = "create" in state_args
+    return {
+        "text": "Введите нижнюю цену",
+        "keyboard": (
+            [[{"text": "Назад", "callback": ars_spec_create_spec_id}]]
+            if create
+            else []
+        )
+        + [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": (ars_specs_id if create else ars_spec_id),
+                }
+            ]
+        ],
+    }
+
+
+def ars_spec_input_cost_floor_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_spec_create_spec_id, ars_specs_id]:
+        del state_args["spec_id"]
+        del state_args["create"]
+
+
+def ars_spec_input_cost_floor_text(id, state_args, handler_arg):
+    try:
+        handler_arg = process_cost_input(handler_arg)
+        if "create" in state_args:
+            state_args["cost_floor"] = handler_arg
+            return ars_spec_input_cost_ceil_id
+        else:
+            with Session(engine) as session:
+                session.get(
+                    ArsSpec,
+                    {
+                        "ars_id": state_args["ars_id"],
+                        "spec_id": state_args["spec_id"],
+                    },
+                ).cost_floor = handler_arg
+                session.commit()
+            return ars_spec_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return ars_spec_input_cost_floor_id
+
+
+ars_spec_input_cost_ceil_id = "ars_spec_input_cost_ceil"
+
+
+def ars_spec_input_cost_ceil_show(id, state_args):
+    create = "create" in state_args
+    return {
+        "text": "Введите верхнюю цену",
+        "keyboard": (
+            [[{"text": "Назад", "callback": ars_spec_input_cost_floor_id}]]
+            if create
+            else []
+        )
+        + [
+            [
+                {
+                    "text": "Пропустить",
+                    "callback": {
+                        "state_id": (ars_specs_id if create else ars_spec_id),
+                        "handler_arg": "skip",
+                    },
+                }
+            ],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": (ars_specs_id if create else ars_spec_id),
+                }
+            ],
+        ],
+    }
+
+
+def ars_spec_input_cost_ceil_callback(id, state_args, state_id, handler_arg):
+    if handler_arg == "skip":
+        if state_id == ars_specs_id:
+            with Session(engine) as session:
+                session.add(
+                    ArsSpec(
+                        ars_id=state_args["ars_id"],
+                        spec_id=state_args["spec_id"],
+                        cost_floor=state_args["cost_floor"]
+                    )
+                )
+                session.commit()
+        else:
+            with Session(engine) as session:
+                session.get(
+                    ArsSpec,
+                    {
+                        "ars_id": state_args["ars_id"],
+                        "spec_id": state_args["spec_id"],
+                    },
+                ).cost_ceil = None
+                session.commit()
+    if state_id in [ars_spec_input_cost_floor_id, ars_specs_id]:
+        del state_args["cost_floor"]
+        if state_id == ars_specs_id:
+            del state_args["spec_id"]
+            del state_args["create"]
+
+
+def ars_spec_input_cost_ceil_text(id, state_args, handler_arg):
+    try:
+        handler_arg = process_cost_input(handler_arg)
+        if "create" in state_args:
+            with Session(engine) as session:
+                session.add(
+                    ArsSpec(
+                        ars_id=state_args["ars_id"],
+                        spec_id=state_args["spec_id"],
+                        cost_floor=state_args["cost_floor"],
+                        cost_ceil=handler_arg
+                    )
+                )
+            del state_args["cost_floor"]
+            del state_args["spec_id"]
+            del state_args["create"]
+            return ars_specs_id
+        else:
+            with Session(engine) as session:
+                session.get(
+                    ArsSpec,
+                    {
+                        "ars_id": state_args["ars_id"],
+                        "spec_id": state_args["spec_id"],
+                    },
+                ).cost_ceil = handler_arg
+                session.commit()
+            return ars_spec_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return ars_spec_input_cost_ceil_id
+
+
+ars_spec_id = "ars_spec"
+
+
+def ars_spec_show(id, state_args):
+    with Session(engine) as session:
+        ars_spec = session.get(
+            ArsSpec,
+            {"ars_id": state_args["ars_id"], "spec_id": state_args["spec_id"]},
+        )
+        ars_spec_dict = {
+            "spec_title": ars_spec.spec.title,
+            "cost_floor": ars_spec.cost_floor,
+            "cost_ceil": ars_spec.cost_ceil,
+        }
+        admin = id == ars_spec.ars.user_id
+    return {
+        "text": "Название: "
+        + ars_spec_dict["title"]
+        + "\n"
+        + (
+            "Нижняя цена: "
+            + ars_spec_dict["cost_floor"]
+            + "\n"
+            + "Верхняя цена: "
+            + ars_spec_dict["cost_ceil"]
+            if ars_spec_dict["cost_ceil"]
+            else "Цена: " + ars_spec_dict["cost_floor"]
+        ),
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_specs_id}],
+        ]
+        + (
+            [
+                [
+                    {
+                        "text": "Изменить нижнюю цену",
+                        "callback": ars_spec_input_cost_floor_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить верхнюю цену",
+                        "callback": ars_spec_input_cost_ceil_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Удалить",
+                        "callback": {
+                            "state_id": ars_specs_id,
+                            "handler_arg": "delete",
+                        },
+                    }
+                ],
+            ]
+            if admin
+            else []
+        ),
+    }
+
+
+def ars_spec_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_specs_id:
+        if handler_arg == "delete":
+            with Session(engine) as session:
+                session.delete(
+                    session.get(
+                        ArsSpec,
+                        {
+                            "ars_id": state_args["ars_id"],
+                            "spec_id": state_args["spec_id"],
+                        },
+                    )
+                )
+                session.commit()
+        del state_args["spec_id"]
+
+
+ars_vendors_id = "ars_vendors"
+
+
+feedbacks_id = "feedbacks"
+
+
 requests_id = "requests"
 
 
@@ -494,41 +835,6 @@ def client_callback(id, state_args, state_id, handler_arg):
 #  STOOOOOOOOOOOOOOOOOOP
 
 """
-ars_id = 60
-
-
-def ars_show(id, state_args):
-    with Session(engine) as session:
-        ars = session.get(Ars, state_args["id"])
-        ars_dict = {
-            "name": ars.name,
-            "description": ars.description,
-            "photo": ars.photo,
-            "phone": ars.phone,
-            "address": ars.address,
-        }
-    return {
-        "text": f"Название: {ars_dict['name']}\n"
-        + f"Описание: {ars_dict['description']}\n"
-        + f"Номер телефона: {ars_dict['phone']}\n"
-        + f"Адрес: {ars_dict['address']}",
-        "photo": ars.photo,
-        "keyboard": [
-            [{"text": "Назад", "callback": arses_id}],
-            [{"text": "Специализации СТО", "callback": ars_specs_id}],
-            [{"text": "Вендоры СТО", "callback": ars_vendors_id}],
-            [{"text": "Отзывы", "callback": feedbacks_id}],
-        ],
-    }
-
-
-def ars_callback_handler(id, state_args, state_id, handler_arg):
-    if state_id == arses_id:
-        del state_args["id"]
-    elif state_id in [ars_specs_id, ars_vendors_id, feedbacks_id]:
-        state_args["ars_id"] = state_args["id"]
-        del state_args["id"]
-
 
 ars_specs_id = 61
 
