@@ -921,7 +921,7 @@ def ars_spec_confirm_callback(id, state_args, state_id, handler_arg):
                 session.add(
                     ArsSpec(
                         ars_id=state_args["ars_id"],
-                        spec_id=state_args["spec_Id"],
+                        spec_id=state_args["spec_id"],
                         cost_floor=state_args["cost_floor"],
                         cost_ceil=state_args["cost_ceil"],
                     )
