@@ -487,9 +487,9 @@ def ars_specs_show(id, state_args):
                 {
                     "text": ars_spec_dict["spec_title"]
                     + " "
-                    + ars_spec_dict["cost_floor"]
+                    + str(ars_spec_dict["cost_floor"])
                     + (
-                        " " + ars_spec_dict["cost_ceil"]
+                        " " + str(ars_spec_dict["cost_ceil"])
                         if ars_spec_dict["cost_ceil"]
                         else ""
                     ),
@@ -721,12 +721,12 @@ def ars_spec_show(id, state_args):
         + "\n"
         + (
             "Нижняя цена: "
-            + ars_spec_dict["cost_floor"]
+            + str(ars_spec_dict["cost_floor"])
             + "\n"
             + "Верхняя цена: "
-            + ars_spec_dict["cost_ceil"]
+            + str(ars_spec_dict["cost_ceil"])
             if ars_spec_dict["cost_ceil"]
-            else "Цена: " + ars_spec_dict["cost_floor"]
+            else "Цена: " + str(ars_spec_dict["cost_floor"])
         ),
         "keyboard": [
             [{"text": "Назад", "callback": ars_specs_id}],
