@@ -394,8 +394,8 @@ def ars_show(id, state_args):
                     "text": "Назад",
                     "callback": state_args["ars_return"],
                 },
-                {"text": "Специализации СТО", "callback": ars_specs_id},
-            ]
+            ],
+            [{"text": "Специализации СТО", "callback": ars_specs_id}],
         ]
         + (
             [
