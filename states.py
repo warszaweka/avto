@@ -109,6 +109,51 @@ def client_callback(id, state_args, state_id, handler_arg):
         state_args["request_create_return"] = client_id
 
 
+ars_offers_id = "ars_offers"
+
+
+def ars_offers_show(id, state_args):
+    with Session(engine) as session:
+        offers_list = [
+            {
+                "request_id": offer.request_id,
+                "request_title": offer.request.title,
+            }
+            for offer in session.query(Offer).where(
+                Offer.ars_id == state_args["ars_id"]
+            )
+        ]
+    return {
+        "text": "Офферы",
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": ars_id},
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": offer_dict["request_title"],
+                    "callback": {
+                        "state_id": offer_id,
+                        "handler_arg": str(offer_dict["request_id"]),
+                    },
+                }
+            ]
+            for offer_dict in offers_list
+        ],
+    }
+
+
+def ars_offers_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_id:
+        state_args["id"] = state_args["ars_id"]
+        del state_args["ars_id"]
+    elif state_id == offer_id:
+        state_args["offer_return"] = ars_offers_id
+        state_args["request_id"] = int(handler_arg)
+
+
 arses_id = "arses"
 
 
@@ -423,12 +468,21 @@ def ars_show(id, state_args):
             [
                 {
                     "text": "Назад",
-                    "callback": state_args["ars_return"],
+                    "callback": (
+                        (
+                            state_args["ars_return"]
+                            if isinstance(state_args["ars_return"], str)
+                            else offer_id
+                        )
+                        if ("ars_return" in state_args)
+                        else main_id
+                    ),
                 },
             ],
             [{"text": "Специализации СТО", "callback": ars_specs_id}],
             [{"text": "Вендоры СТО", "callback": ars_vendors_id}],
             [{"text": "Отзывы", "callback": feedbacks_id}],
+            [{"text": "Офферы", "callback": ars_offers_id}],
         ]
         + (
             [
@@ -476,10 +530,29 @@ def ars_show(id, state_args):
 
 
 def ars_callback(id, state_args, state_id, handler_arg):
-    if state_id == state_args["ars_return"]:
+    if (
+        state_id == main_id
+        or state_id == offer_id
+        or "ars_return" in state_args
+        and state_id == state_args["ars_return"]
+    ):
+        if state_id == offer_id:
+            state_args["ars_id"] = state_args["id"]
+            state_args["request_id"] = state_args["ars_return"]
         del state_args["id"]
-        del state_args["ars_return"]
-    elif state_id in [ars_specs_id, ars_vendors_id, feedbacks_id]:
+        if "ars_return" in state_args:
+            del state_args["ars_return"]
+        if state_id == main_id:
+            if "request_return" in state_args:
+                del state_args["request_return"]
+            if "offer_return" in state_args:
+                del state_args["offer_return"]
+    elif state_id in [
+        ars_specs_id,
+        ars_vendors_id,
+        feedbacks_id,
+        ars_offers_id,
+    ]:
         state_args["ars_id"] = state_args["id"]
         del state_args["id"]
 
@@ -743,19 +816,41 @@ def ars_delete_show(id, state_args):
     return {
         "text": "Подтвердите",
         "keyboard": [
-            [{"text": "Подтвердить", "callback": state_args["ars_return"]}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": (
+                        state_args["ars_return"]
+                        if (
+                            "ars_return" in state_args
+                            and isinstance(state_args["ars_return"], str)
+                        )
+                        else main_id
+                    ),
+                }
+            ],
             [{"text": "Отменить", "callback": ars_id}],
         ],
     }
 
 
 def ars_delete_callback(id, state_args, state_id, handler_arg):
-    if state_id == state_args["ars_return"]:
+    if (
+        state_id == main_id
+        or "ars_return" in state_args
+        and state_id == state_args["ars_return"]
+    ):
         with Session(engine) as session:
             session.delete(session.get(Ars, state_args["id"]))
             session.commit()
         del state_args["id"]
-        del state_args["ars_return"]
+        if "ars_return" in state_args:
+            del state_args["ars_return"]
+        if state_id == main_id:
+            if "request_return" in state_args:
+                del state_args["request_return"]
+            if "offer_return" in state_args:
+                del state_args["offer_return"]
 
 
 ars_specs_id = "ars_specs"
@@ -2096,14 +2191,22 @@ def request_show(id, state_args):
         + "Описание: "
         + request_dict["description"]
         + "\n"
-        + "Номер телефона: "
+        + "Ном��р телефона: "
         + request_dict["phone"],
         "photo": request_dict["picture"],
         "keyboard": [
             [
                 {
                     "text": "Назад",
-                    "callback": state_args["request_return"],
+                    "callback": (
+                        (
+                            state_args["request_return"]
+                            if isinstance(state_args["request_return"], str)
+                            else offer_id
+                        )
+                        if ("request_return" in state_args)
+                        else main_id
+                    ),
                 },
             ],
             [{"text": "Специализации Заявки", "callback": request_specs_id}],
@@ -2149,9 +2252,23 @@ def request_show(id, state_args):
 
 
 def request_callback(id, state_args, state_id, handler_arg):
-    if state_id == state_args["request_return"]:
+    if (
+        state_id == main_id
+        or state_id == offer_id
+        or "request_return" in state_args
+        and state_id == state_args["request_return"]
+    ):
+        if state_id == offer_id:
+            state_args["request_id"] = state_args["id"]
+            state_args["ars_id"] = state_args["request_return"]
         del state_args["id"]
-        del state_args["request_return"]
+        if "request_return" in state_args:
+            del state_args["request_return"]
+        if state_id == main_id:
+            if "ars_return" in state_args:
+                del state_args["ars_return"]
+            if "offer_return" in state_args:
+                del state_args["offer_return"]
     elif state_id in [request_specs_id, offers_id]:
         state_args["request_id"] = state_args["id"]
         del state_args["id"]
@@ -2382,7 +2499,14 @@ def request_delete_show(id, state_args):
             [
                 {
                     "text": "Подтвердить",
-                    "callback": state_args["request_return"],
+                    "callback": (
+                        state_args["request_return"]
+                        if (
+                            "request_return" in state_args
+                            and isinstance(state_args["request_return"], str)
+                        )
+                        else main_id
+                    ),
                 }
             ],
             [{"text": "Отменить", "callback": request_id}],
@@ -2391,12 +2515,22 @@ def request_delete_show(id, state_args):
 
 
 def request_delete_callback(id, state_args, state_id, handler_arg):
-    if state_id == state_args["request_return"]:
+    if (
+        state_id == main_id
+        or "request_return" in state_args
+        and state_id == state_args["request_return"]
+    ):
         with Session(engine) as session:
             session.delete(session.get(Request, state_args["id"]))
             session.commit()
         del state_args["id"]
-        del state_args["request_return"]
+        if "request_return" in state_args:
+            del state_args["ars_return"]
+        if state_id == main_id:
+            if "ars_return" in state_args:
+                del state_args["ars_return"]
+            if "offer_return" in state_args:
+                del state_args["offer_return"]
 
 
 request_specs_id = "request_specs"
@@ -2639,7 +2773,8 @@ def offers_callback(id, state_args, state_id, handler_arg):
     if state_id == request_id:
         state_args["id"] = state_args["request_id"]
         del state_args["request_id"]
-    if state_id == offer_id:
+    elif state_id == offer_id:
+        state_args["offer_return"] = offers_id
         state_args["ars_id"] = int(handler_arg)
 
 
@@ -2661,7 +2796,14 @@ def offer_create_ars_show(id, state_args):
         ]
     return {
         "text": "Выберите СТО",
-        "keyboard": [[{"text": "Отменить", "callback": offers_id}]]
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": offers_id,
+                }
+            ]
+        ]
         + [
             [
                 {
@@ -2690,7 +2832,12 @@ def offer_create_cost_floor_show(id, state_args):
         "text": "Введите нижнюю цену",
         "keyboard": [
             [{"text": "Назад", "callback": offer_create_ars_id}],
-            [{"text": "Отменить", "callback": offers_id}],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": offers_id,
+                }
+            ],
         ],
     }
 
@@ -2718,7 +2865,12 @@ def offer_create_cost_ceil_show(id, state_args):
         "keyboard": [
             [{"text": "Назад", "callback": offer_create_cost_floor_id}],
             [{"text": "Пропустить", "callback": offer_create_description_id}],
-            [{"text": "Отменить", "callback": offers_id}],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": offers_id,
+                }
+            ],
         ],
     }
 
@@ -2726,7 +2878,10 @@ def offer_create_cost_ceil_show(id, state_args):
 def offer_create_cost_ceil_callback(id, state_args, state_id, handler_arg):
     if state_id == offer_create_description_id:
         state_args["cost_ceil"] = None
-    elif state_id in [offer_create_cost_floor_id, offers_id]:
+    elif state_id in [
+        offer_create_cost_floor_id,
+        offers_id,
+    ]:
         del state_args["cost_floor"]
         if state_id == offers_id:
             del state_args["ars_id"]
@@ -2751,13 +2906,21 @@ def offer_create_description_show(id, state_args):
         "text": "Введите описание",
         "keyboard": [
             [{"text": "Назад", "callback": offer_create_cost_ceil_id}],
-            [{"text": "Отменить", "callback": offers_id}],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": offers_id,
+                }
+            ],
         ],
     }
 
 
 def offer_create_description_callback(id, state_args, state_id, handler_arg):
-    if state_id in [offer_create_cost_ceil_id, offers_id]:
+    if state_id in [
+        offer_create_cost_ceil_id,
+        offers_id,
+    ]:
         del state_args["cost_ceil"]
         if state_id == offers_id:
             del state_args["cost_floor"]
@@ -2802,13 +2965,21 @@ def offer_confirm_show(id, state_args):
                     },
                 }
             ],
-            [{"text": "Отменить", "callback": offers_id}],
+            [
+                {
+                    "text": "Отменить",
+                    "callback": offers_id,
+                }
+            ],
         ],
     }
 
 
 def offer_confirm_callback(id, state_args, state_id, handler_arg):
-    if state_id in [offer_create_description_id, offers_id]:
+    if state_id in [
+        offer_create_description_id,
+        offers_id,
+    ]:
         if handler_arg == "confirm":
             with Session(engine) as session:
                 session.add(
@@ -2861,7 +3032,18 @@ def offer_show(id, state_args):
         + "\n"
         + "Победитель: "
         + ("W" if offer_dict["winner"] else " "),
-        "keyboard": [[{"text": "Назад", "callback": offers_id}]]
+        "keyboard": [
+            [
+                {
+                    "text": "Назад",
+                    "callback": (
+                        state_args["offer_return"]
+                        if "offer_return" in state_args
+                        else main_id
+                    ),
+                }
+            ]
+        ]
         + (
             [
                 [
@@ -2908,8 +3090,24 @@ def offer_show(id, state_args):
 
 
 def offer_callback(id, state_args, state_id, handler_arg):
-    if state_id == offers_id:
-        del state_args["ars_id"]
+    if (
+        state_id == main_id
+        or "offer_return" in state_args
+        and state_id == state_args["offer_return"]
+    ):
+        if "offer_return" in state_args:
+            if state_args["offer_return"] == offers_id:
+                del state_args["ars_id"]
+            elif state_args["offer_return"] == ars_offers_id:
+                del state_args["request_id"]
+            del state_args["offer_return"]
+        else:
+            if "ars_return" in state_args:
+                del state_args["ars_return"]
+            if "request_return" in state_args:
+                del state_args["request_return"]
+            del state_args["request_id"]
+            del state_args["ars_id"]
 
 
 offer_edit_cost_floor_id = "offer_edit_cost_floor"
@@ -3155,14 +3353,27 @@ def offer_delete_show(id, state_args):
     return {
         "text": "Подтвердите",
         "keyboard": [
-            [{"text": "Подтвердить", "callback": offers_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": (
+                        state_args["offer_return"]
+                        if "offer_return" in state_args
+                        else main_id
+                    ),
+                }
+            ],
             [{"text": "Отменить", "callback": offer_id}],
         ],
     }
 
 
 def offer_delete_callback(id, state_args, state_id, handler_arg):
-    if state_id == offers_id:
+    if (
+        state_id == main_id
+        or "offer_return" in state_args
+        and state_id == state_args["offer_return"]
+    ):
         with Session(engine) as session:
             session.delete(
                 session.get(
@@ -3174,4 +3385,16 @@ def offer_delete_callback(id, state_args, state_id, handler_arg):
                 )
             )
             session.commit()
-        del state_args["ars_id"]
+        if "offer_return" in state_args:
+            if state_args["offer_return"] == offers_id:
+                del state_args["ars_id"]
+            elif state_args["offer_return"] == ars_offers_id:
+                del state_args["request_id"]
+            del state_args["offer_return"]
+        else:
+            if "ars_return" in state_args:
+                del state_args["ars_return"]
+            if "request_return" in state_args:
+                del state_args["request_return"]
+            del state_args["request_id"]
+            del state_args["ars_id"]
