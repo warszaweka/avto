@@ -2818,6 +2818,7 @@ def offer_confirm_callback(id, state_args, state_id, handler_arg):
                         cost_floor=state_args["cost_floor"],
                         cost_ceil=state_args["cost_ceil"],
                         description=state_args["description"],
+                        winner=False,
                     )
                 )
                 session.commit()
