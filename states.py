@@ -322,7 +322,7 @@ def ars_create_picture_callback(id, state_args, state_id, handler_arg):
 
 
 def ars_create_picture_photo(id, state_args, handler_arg):
-    state_args["picture"] = process_phone_input(handler_arg)
+    state_args["picture"] = handler_arg
     return ars_confirm_id
 
 
@@ -2012,7 +2012,7 @@ def request_create_picture_callback(id, state_args, state_id, handler_arg):
 
 
 def request_create_picture_photo(id, state_args, handler_arg):
-    state_args["picture"] = process_phone_input(handler_arg)
+    state_args["picture"] = handler_arg
     return request_confirm_id
 
 
