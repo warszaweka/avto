@@ -106,13 +106,12 @@ class RequestSpec(DeclarativeBase):
 class Offer(DeclarativeBase):
     __tablename__ = "offer"
 
-    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    request_id = Column(BIGINT, ForeignKey(Request.id), primary_key=True)
+    ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
     cost_floor = Column(BIGINT, nullable=False)
     cost_ceil = Column(BIGINT)
     description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
     winner = Column(BOOLEAN, nullable=False)
-    ars_id = Column(BIGINT, ForeignKey(Ars.id), nullable=False)
-    request_id = Column(BIGINT, ForeignKey(Request.id), nullable=False)
 
     ars = relationship(Ars, back_populates="offers")
     request = relationship(Request, back_populates="offers")

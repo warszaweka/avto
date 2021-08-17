@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from models import (Ars, ArsSpec, ArsVendor, Feedback, Request, RequestSpec,
-                    Spec, Vendor)
+from models import (Ars, ArsSpec, ArsVendor, Feedback, Offer, Request,
+                    RequestSpec, Spec, Vendor)
 from processors import (process_address_input, process_cost_input,
                         process_description_input, process_phone_input,
                         process_stars_input, process_title_input)
@@ -2107,6 +2107,7 @@ def request_show(id, state_args):
                 },
             ],
             [{"text": "Специализации Заявки", "callback": request_specs_id}],
+            [{"text": "Офферы", "callback": offers_id}],
         ]
         + (
             [
@@ -2151,7 +2152,7 @@ def request_callback(id, state_args, state_id, handler_arg):
     if state_id == state_args["request_return"]:
         del state_args["id"]
         del state_args["request_return"]
-    elif state_id in [request_specs_id]:
+    elif state_id in [request_specs_id, offers_id]:
         state_args["request_id"] = state_args["id"]
         del state_args["id"]
 
@@ -2583,3 +2584,593 @@ def request_spec_delete_callback(id, state_args, state_id, handler_arg):
             )
             session.commit()
         del state_args["spec_id"]
+
+
+offers_id = "offers"
+
+
+def offers_show(id, state_args):
+    with Session(engine) as session:
+        offers_list = [
+            {
+                "ars_id": offer.ars_id,
+                "ars_title": offer.ars.title,
+                "cost_floor": offer.cost_floor,
+                "cost_ceil": offer.cost_ceil,
+                "winner": offer.winner,
+            }
+            for offer in session.query(Offer).where(
+                Offer.request_id == state_args["request_id"]
+            )
+        ]
+    return {
+        "text": "Офферы",
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": request_id},
+                {"text": "Создать", "callback": offer_create_ars_id},
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": ("W" if offer_dict["winner"] else " ")
+                    + " "
+                    + offer_dict["ars_title"]
+                    + " "
+                    + str(offer_dict["cost_floor"])
+                    + (
+                        (" " + str(offer_dict["cost_ceil"]))
+                        if offer_dict["cost_ceil"]
+                        else ""
+                    ),
+                    "callback": {
+                        "state_id": offer_id,
+                        "handler_arg": str(offer_dict["ars_id"]),
+                    },
+                }
+            ]
+            for offer_dict in offers_list
+        ],
+    }
+
+
+def offers_callback(id, state_args, state_id, handler_arg):
+    if state_id == request_id:
+        state_args["id"] = state_args["request_id"]
+        del state_args["request_id"]
+    if state_id == offer_id:
+        state_args["ars_id"] = int(handler_arg)
+
+
+offer_create_ars_id = "offer_create_ars"
+
+
+def offer_create_ars_show(id, state_args):
+    with Session(engine) as session:
+        arses_list = [
+            {"id": ars.id, "title": ars.title}
+            for ars in session.query(Ars).where(
+                Ars.user_id == id
+                and Ars.id.not_in(
+                    session.query(Offer.ars_id).where(
+                        Offer.request_id == state_args["request_id"]
+                    )
+                )
+            )
+        ]
+    return {
+        "text": "Выберите СТО",
+        "keyboard": [[{"text": "Отменить", "callback": offers_id}]]
+        + [
+            [
+                {
+                    "text": ars_dict["title"],
+                    "callback": {
+                        "state_id": offer_create_cost_floor_id,
+                        "handler_arg": str(ars_dict["id"]),
+                    },
+                }
+            ]
+            for ars_dict in arses_list
+        ],
+    }
+
+
+def offer_create_ars_callback(id, state_args, state_id, handler_arg):
+    if state_id == offer_create_cost_floor_id:
+        state_args["ars_id"] = int(handler_arg)
+
+
+offer_create_cost_floor_id = "offer_create_cost_floor"
+
+
+def offer_create_cost_floor_show(id, state_args):
+    return {
+        "text": "Введите нижнюю цену",
+        "keyboard": [
+            [{"text": "Назад", "callback": offer_create_ars_id}],
+            [{"text": "Отменить", "callback": offers_id}],
+        ],
+    }
+
+
+def offer_create_cost_floor_callback(id, state_args, state_id, handler_arg):
+    if state_id in [offer_create_ars_id, offers_id]:
+        del state_args["ars_id"]
+
+
+def offer_create_cost_floor_text(id, state_args, handler_arg):
+    try:
+        state_args["cost_floor"] = process_cost_input(handler_arg)
+        return offer_create_cost_ceil_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return offer_create_cost_floor_id
+
+
+offer_create_cost_ceil_id = "offer_create_cost_ceil"
+
+
+def offer_create_cost_ceil_show(id, state_args):
+    return {
+        "text": "Введите верхнюю цену",
+        "keyboard": [
+            [{"text": "Назад", "callback": offer_create_cost_floor_id}],
+            [{"text": "Пропустить", "callback": offer_create_description_id}],
+            [{"text": "Отменить", "callback": offers_id}],
+        ],
+    }
+
+
+def offer_create_cost_ceil_callback(id, state_args, state_id, handler_arg):
+    if state_id == offer_create_description_id:
+        state_args["cost_ceil"] = None
+    elif state_id in [offer_create_cost_floor_id, offers_id]:
+        del state_args["cost_floor"]
+        if state_id == offers_id:
+            del state_args["ars_id"]
+
+
+def offer_create_cost_ceil_text(id, state_args, handler_arg):
+    try:
+        state_args["cost_ceil"] = process_cost_input(
+            handler_arg, cost_floor=state_args["cost_floor"]
+        )
+        return offer_create_description_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return offer_create_cost_ceil_id
+
+
+offer_create_description_id = "offer_create_description"
+
+
+def offer_create_description_show(id, state_args):
+    return {
+        "text": "Введите описание",
+        "keyboard": [
+            [{"text": "Назад", "callback": offer_create_cost_ceil_id}],
+            [{"text": "Отменить", "callback": offers_id}],
+        ],
+    }
+
+
+def offer_create_description_callback(id, state_args, state_id, handler_arg):
+    if state_id in [offer_create_cost_ceil_id, offers_id]:
+        del state_args["cost_ceil"]
+        if state_id == offers_id:
+            del state_args["cost_floor"]
+            del state_args["ars_id"]
+
+
+def offer_create_description_text(id, state_args, handler_arg):
+    try:
+        state_args["description"] = process_description_input(handler_arg)
+        return offer_confirm_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return offer_create_description_id
+
+
+offer_confirm_id = "offer_confirm"
+
+
+def offer_confirm_show(id, state_args):
+    with Session(engine) as session:
+        ars_title = session.get(Ars, state_args["ars_id"]).title
+    return {
+        "text": "Подтвердите:\nСТО: "
+        + ars_title
+        + "\n"
+        + "Нижняя цена: "
+        + str(state_args["cost_floor"])
+        + "\n"
+        + "Верхняя цена: "
+        + str(state_args["cost_ceil"])
+        + "\n"
+        + "Описание: "
+        + state_args["description"],
+        "keyboard": [
+            [{"text": "Назад", "callback": offer_create_description_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": offers_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": offers_id}],
+        ],
+    }
+
+
+def offer_confirm_callback(id, state_args, state_id, handler_arg):
+    if state_id in [offer_create_description_id, offers_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.add(
+                    Offer(
+                        request_id=state_args["request_id"],
+                        ars_id=state_args["ars_id"],
+                        cost_floor=state_args["cost_floor"],
+                        cost_ceil=state_args["cost_ceil"],
+                        description=state_args["description"],
+                    )
+                )
+                session.commit()
+        del state_args["description"]
+        if state_id == offers_id:
+            del state_args["cost_ceil"]
+            del state_args["cost_floor"]
+            del state_args["ars_id"]
+
+
+offer_id = "offer"
+
+
+def offer_show(id, state_args):
+    with Session(engine) as session:
+        offer = session.get(
+            Offer,
+            {
+                "request_id": state_args["request_id"],
+                "ars_id": state_args["ars_id"],
+            },
+        )
+        offer_dict = {
+            "cost_floor": offer.cost_floor,
+            "cost_ceil": offer.cost_ceil,
+            "description": offer.description,
+            "winner": offer.winner,
+        }
+        admin_request = id == offer.request.user_id
+        admin_ars = id == offer.ars.user_id
+    return {
+        "text": "Нижняя цена: "
+        + str(offer_dict["cost_floor"])
+        + "\n"
+        + "Верхняя цена: "
+        + str(offer_dict["cost_ceil"])
+        + "\n"
+        + "Описание: "
+        + offer_dict["description"]
+        + "\n"
+        + "Победитель: "
+        + ("W" if offer_dict["winner"] else " "),
+        "keyboard": [[{"text": "Назад", "callback": offers_id}]]
+        + (
+            [
+                [
+                    {
+                        "text": "Изменить нижнюю цену",
+                        "callback": offer_edit_cost_floor_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить верхнюю цену",
+                        "callback": offer_edit_cost_ceil_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Изменить описание",
+                        "callback": offer_edit_description_id,
+                    }
+                ],
+                [
+                    {
+                        "text": "Удалить",
+                        "callback": offer_delete_id,
+                    }
+                ],
+            ]
+            if admin_ars
+            else []
+        )
+        + (
+            [
+                [
+                    {
+                        "text": "Выбрать победителем",
+                        "callback": offer_confirm_winner_id,
+                    }
+                ]
+            ]
+            if (admin_request and not offer_dict["winner"])
+            else []
+        ),
+    }
+
+
+def offer_callback(id, state_args, state_id, handler_arg):
+    if state_id == offers_id:
+        del state_args["ars_id"]
+
+
+offer_edit_cost_floor_id = "offer_edit_cost_floor"
+
+
+def offer_edit_cost_floor_show(id, state_args):
+    return {
+        "text": "Введите новую нижнюю цену",
+        "keyboard": [[{"text": "Отменить", "callback": offer_id}]],
+    }
+
+
+def offer_edit_cost_floor_text(id, state_args, handler_arg):
+    try:
+        with Session(engine) as session:
+            cost_ceil = session.get(
+                Offer,
+                {
+                    "request_id": state_args["request_id"],
+                    "ars_id": state_args["ars_id"],
+                },
+            ).cost_ceil
+        state_args["cost_floor"] = process_cost_input(
+            handler_arg, cost_ceil=cost_ceil
+        )
+        return offer_confirm_cost_floor_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return offer_edit_cost_floor_id
+
+
+offer_confirm_cost_floor_id = "offer_confirm_cost_floor"
+
+
+def offer_confirm_cost_floor_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + str(state_args["cost_floor"]),
+        "keyboard": [
+            [{"text": "Назад", "callback": offer_edit_cost_floor_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": offer_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": offer_id}],
+        ],
+    }
+
+
+def offer_confirm_cost_floor_callback(id, state_args, state_id, handler_arg):
+    if state_id in [offer_edit_cost_floor_id, offer_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(
+                    Offer,
+                    {
+                        "request_id": state_args["request_id"],
+                        "ars_id": state_args["ars_id"],
+                    },
+                ).cost_floor = state_args["cost_floor"]
+                session.commit()
+        del state_args["cost_floor"]
+
+
+offer_edit_cost_ceil_id = "offer_edit_cost_ceil"
+
+
+def offer_edit_cost_ceil_show(id, state_args):
+    return {
+        "text": "Введите новую верхнюю цену",
+        "keyboard": [
+            [
+                {
+                    "text": "Пропустить",
+                    "calblack": offer_confirm_cost_ceil_id,
+                }
+            ],
+            [{"text": "Отменить", "callback": offer_id}],
+        ],
+    }
+
+
+def offer_edit_cost_ceil_callback(id, state_args, state_id, handler_arg):
+    if state_id == offer_confirm_cost_ceil_id:
+        state_args["cost_ceil"] = None
+
+
+def offer_edit_cost_ceil_text(id, state_args, handler_arg):
+    try:
+        with Session(engine) as session:
+            cost_floor = session.get(
+                Offer,
+                {
+                    "request_id": state_args["request_id"],
+                    "ars_id": state_args["ars_id"],
+                },
+            ).cost_floor
+        state_args["cost_ceil"] = process_cost_input(
+            handler_arg, cost_floor=cost_floor
+        )
+        return offer_confirm_cost_ceil_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return offer_edit_cost_ceil_id
+
+
+offer_confirm_cost_ceil_id = "offer_confirm_cost_ceil"
+
+
+def offer_confirm_cost_ceil_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + str(state_args["cost_ceil"]),
+        "keyboard": [
+            [{"text": "Назад", "callback": offer_edit_cost_ceil_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": offer_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": offer_id}],
+        ],
+    }
+
+
+def offer_confirm_cost_ceil_callback(id, state_args, state_id, handler_arg):
+    if state_id in [offer_edit_cost_ceil_id, offer_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(
+                    Offer,
+                    {
+                        "request_id": state_args["request_id"],
+                        "ars_id": state_args["ars_id"],
+                    },
+                ).cost_ceil = state_args["cost_ceil"]
+                session.commit()
+        del state_args["cost_ceil"]
+
+
+offer_edit_description_id = "offer_edit_description"
+
+
+def offer_edit_description_show(id, state_args):
+    return {
+        "text": "Введите новое описание",
+        "keyboard": [[{"text": "Отменить", "callback": offer_id}]],
+    }
+
+
+def offer_edit_description_text(id, state_args, handler_arg):
+    try:
+        state_args["description"] = process_description_input(handler_arg)
+        return offer_confirm_description_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return offer_edit_description_id
+
+
+offer_confirm_description_id = "offer_confirm_description"
+
+
+def offer_confirm_description_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["description"],
+        "keyboard": [
+            [{"text": "Назад", "callback": offer_edit_description_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": offer_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": offer_id}],
+        ],
+    }
+
+
+def offer_confirm_description_callback(id, state_args, state_id, handler_arg):
+    if state_id in [offer_edit_description_id, offer_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(
+                    Offer,
+                    {
+                        "request_id": state_args["request_id"],
+                        "ars_id": state_args["ars_id"],
+                    },
+                ).description = state_args["description"]
+                session.commit()
+        del state_args["description"]
+
+
+offer_confirm_winner_id = "offer_confirm_winner"
+
+
+def offer_confirm_winner_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "keyboard": [
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {
+                        "state_id": offer_id,
+                        "handler_arg": "confirm",
+                    },
+                }
+            ],
+            [{"text": "Отменить", "callback": offer_id}],
+        ],
+    }
+
+
+def offer_confirm_winner_callback(id, state_args, state_id, handler_arg):
+    if state_id == offer_id:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(
+                    Offer,
+                    {
+                        "request_id": state_args["request_id"],
+                        "ars_id": state_args["ars_id"],
+                    },
+                ).winner = True
+                session.commit()
+
+
+offer_delete_id = "offer_delete"
+
+
+def offer_delete_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "keyboard": [
+            [{"text": "Подтвердить", "callback": offers_id}],
+            [{"text": "Отменить", "callback": offer_id}],
+        ],
+    }
+
+
+def offer_delete_callback(id, state_args, state_id, handler_arg):
+    if state_id == offers_id:
+        with Session(engine) as session:
+            session.delete(
+                session.get(
+                    Offer,
+                    {
+                        "request_id": state_args["request_id"],
+                        "ars_id": state_args["ars_id"],
+                    },
+                )
+            )
+            session.commit()
+        del state_args["ars_id"]
