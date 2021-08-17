@@ -28,35 +28,21 @@ def main_show(id, state_args):
     }
 
 
-def main_callback(id, state_args, state_id, handler_arg):
-    if state_id == diller_id:
-        state_args["diller"] = True
-    elif state_id == client_id:
-        state_args["client"] = True
-
-
 arses_id = "arses"
 
 
 def arses_show(id, state_args):
-    diller = "diller" in state_args
     with Session(engine) as session:
-        query = session.query(Ars)
         arses_list = [
             {"id": ars.id, "title": ars.title}
-            for ars in (
-                query.where(Ars.user_id == id) if diller else query.all()
-            )
+            for ars in session.query(Ars).all()
         ]
     return {
         "text": "СТО",
         "keyboard": [
             [
-                {
-                    "text": "Назад",
-                    "callback": (diller_id if diller else main_id),
-                },
-                {"text": "Создать", "callback": ars_input_title_id},
+                {"text": "Назад", "callback": main_id},
+                {"text": "Создать", "callback": ars_create_title_id},
             ]
         ]
         + [
@@ -75,234 +61,231 @@ def arses_show(id, state_args):
 
 
 def arses_callback(id, state_args, state_id, handler_arg):
-    if state_id == ars_input_title_id:
-        state_args["create"] = True
-    elif state_id == ars_id:
+    if state_id == ars_id:
+        state_args["ars_return"] = arses_id
         state_args["id"] = int(handler_arg)
+    elif state_id == ars_create_title_id:
+        state_args["ars_create_return"] = arses_id
 
 
-ars_input_title_id = "ars_input_title"
+ars_create_title_id = "ars_create_title"
 
 
-def ars_input_title_show(id, state_args):
-    create = "create" in state_args
+def ars_create_title_show(id, state_args):
     return {
-        "text": "Введите " + ("" if create else "новое ") + "название",
+        "text": "Введите название",
         "keyboard": [
-            [
-                {
-                    "text": "Отменить",
-                    "callback": (arses_id if create else ars_id),
-                }
-            ]
+            [{"text": "Отменить", "callback": state_args["ars_create_retun"]}]
         ],
     }
 
 
-def ars_input_title_callback(id, state_args, state_id, handler_arg):
-    if state_id == arses_id:
-        del state_args["create"]
+def ars_create_title_callback(id, state_args, state_id, handler_arg):
+    if state_id == state_args["ars_create_return"]:
+        del state_args["ars_create_return"]
 
 
-def ars_input_title_text(id, state_args, handler_arg):
+def ars_create_title_text(id, state_args, handler_arg):
     try:
-        handler_arg = process_title_input(handler_arg)
-        if "create" in state_args:
-            state_args["title"] = handler_arg
-            return ars_input_description_id
-        else:
-            with Session(engine) as session:
-                session.get(Ars, state_args["id"]).title = handler_arg
-                session.commit()
-            return ars_id
+        state_args["title"] = process_title_input(handler_arg)
+        return ars_create_description_id
     except Exception as e:
         state_args["status"] = str(e)
-        return ars_input_title_id
+        return ars_create_title_id
 
 
-ars_input_description_id = "ars_input_description"
+ars_create_description_id = "ars_create_description"
 
 
-def ars_input_description_show(id, state_args):
-    create = "create" in state_args
+def ars_create_description_show(id, state_args):
     return {
-        "text": "Введите " + ("" if create else "новое ") + "описание",
-        "keyboard": (
-            [[{"text": "Назад", "callback": ars_input_title_id}]]
-            if create
-            else []
-        )
-        + [
+        "text": "Введите описание",
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_create_title_id}],
             [
                 {
                     "text": "Отменить",
-                    "callback": (arses_id if create else ars_id),
+                    "callback": state_args["ars_create_return"],
                 }
-            ]
+            ],
         ],
     }
 
 
-def ars_input_description_callback(id, state_args, state_id, handler_arg):
-    if state_id in [ars_input_title_id, arses_id]:
+def ars_create_description_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_create_title_id, state_args["ars_create_return"]]:
         del state_args["title"]
-        if state_id == arses_id:
-            del state_args["create"]
+        if state_id == state_args["ars_create_return"]:
+            del state_args["ars_create_return"]
 
 
-def ars_input_description_text(id, state_args, handler_arg):
+def ars_create_description_text(id, state_args, handler_arg):
     try:
-        handler_arg = process_description_input(handler_arg)
-        if "create" in state_args:
-            state_args["description"] = handler_arg
-            return ars_input_address_id
-        else:
-            with Session(engine) as session:
-                session.get(Ars, state_args["id"]).description = handler_arg
-                session.commit()
-            return ars_id
+        state_args["description"] = process_description_input(handler_arg)
+        return ars_create_address_id
     except Exception as e:
         state_args["status"] = str(e)
-        return ars_input_description_id
+        return ars_create_description_id
 
 
-ars_input_address_id = "ars_input_address"
+ars_create_address_id = "ars_create_address"
 
 
-def ars_input_address_show(id, state_args):
-    create = "create" in state_args
+def ars_create_address_show(id, state_args):
     return {
-        "text": "Введите " + ("" if create else "новый ") + "адрес",
-        "keyboard": (
-            [[{"text": "Назад", "callback": ars_input_description_id}]]
-            if create
-            else []
-        )
-        + [
+        "text": "Введите адрес",
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_create_description_id}],
             [
                 {
                     "text": "Отменить",
-                    "callback": (arses_id if create else ars_id),
+                    "callback": state_args["ars_create_return"],
                 }
-            ]
+            ],
         ],
     }
 
 
-def ars_input_address_callback(id, state_args, state_id, handler_arg):
-    if state_id in [ars_input_description_id, arses_id]:
+def ars_create_address_callback(id, state_args, state_id, handler_arg):
+    if state_id in [
+        ars_create_description_id,
+        state_args["ars_create_return"],
+    ]:
         del state_args["description"]
-        if state_id == arses_id:
+        if state_id == state_args["ars_create_return"]:
             del state_args["title"]
-            del state_args["create"]
+            del state_args["ars_create_return"]
 
 
-def ars_input_address_text(id, state_args, handler_arg):
+def ars_create_address_text(id, state_args, handler_arg):
     try:
         latitude, longitude = process_address_input(handler_arg)
-        if "create" in state_args:
-            state_args["address"] = handler_arg
-            state_args["latitude"] = latitude
-            state_args["longitude"] = longitude
-            return ars_input_phone_id
-        else:
-            with Session(engine) as session:
-                ars = session.get(Ars, state_args["id"])
-                ars.address = handler_arg
-                ars.latitude = latitude
-                ars.longitude = longitude
-                session.commit()
-            return ars_id
+        state_args["address"] = handler_arg
+        state_args["latitude"] = latitude
+        state_args["longitude"] = longitude
+        return ars_create_phone_id
     except Exception as e:
         state_args["status"] = str(e)
-        return ars_input_address_id
+        return ars_create_address_id
 
 
-ars_input_phone_id = "ars_input_phone"
+ars_create_phone_id = "ars_create_phone"
 
 
-def ars_input_phone_show(id, state_args):
-    create = "create" in state_args
+def ars_create_phone_show(id, state_args):
     return {
-        "text": "Введите " + ("" if create else "новый ") + "номер телефона",
-        "keyboard": (
-            [[{"text": "Назад", "callback": ars_input_address_id}]]
-            if create
-            else []
-        )
-        + [
+        "text": "Введите номер телефона",
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_create_address_id}],
             [
                 {
                     "text": "Отменить",
-                    "callback": (arses_id if create else ars_id),
+                    "callback": state_args["ars_create_return"],
                 }
-            ]
+            ],
         ],
     }
 
 
-def ars_input_phone_callback(id, state_args, state_id, handler_arg):
-    if state_id in [ars_input_address_id, arses_id]:
+def ars_create_phone_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_create_address_id, state_args["ars_create_return"]]:
         del state_args["address"]
         del state_args["latitude"]
         del state_args["longitude"]
-        if state_id == arses_id:
+        if state_id == state_args["ars_create_return"]:
             del state_args["description"]
             del state_args["title"]
-            del state_args["create"]
+            del state_args["ars_create_return"]
 
 
-def ars_input_phone_text(id, state_args, handler_arg):
+def ars_create_phone_text(id, state_args, handler_arg):
     try:
-        handler_arg = process_phone_input(handler_arg)
-        if "create" in state_args:
-            state_args["phone"] = handler_arg
-            return ars_input_picture_id
-        else:
-            with Session(engine) as session:
-                session.get(Ars, state_args["id"]).phone = handler_arg
-                session.commit()
-            return ars_id
+        state_args["phone"] = process_phone_input(handler_arg)
+        return ars_create_picture_id
     except Exception as e:
         state_args["status"] = str(e)
-        return ars_input_phone_id
+        return ars_create_phone_id
 
 
-ars_input_picture_id = "ars_input_picture"
+ars_create_picture_id = "ars_create_picture"
 
 
-def ars_input_picture_show(id, state_args):
-    create = "create" in state_args
+def ars_create_picture_show(id, state_args):
     return {
-        "text": "Отправьте " + ("" if create else "новую ") + "фотографию",
-        "keyboard": (
-            [[{"text": "Назад", "callback": ars_input_phone_id}]]
-            if create
-            else []
-        )
-        + [
+        "text": "Отправьте фотографию",
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_create_phone_id}],
+            [{"text": "Пропустить", "callback": ars_confirm_id}],
             [
                 {
-                    "text": "Пропустить",
+                    "text": "Отменить",
+                    "callback": state_args["ars_create_return"],
+                }
+            ],
+        ],
+    }
+
+
+def ars_create_picture_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_confirm_id:
+        state_args["picture"] = None
+    elif state_id in [ars_create_phone_id, state_args["ars_create_return"]]:
+        del state_args["phone"]
+        if state_id == state_args["ars_create_return"]:
+            del state_args["address"]
+            del state_args["latitude"]
+            del state_args["longitude"]
+            del state_args["description"]
+            del state_args["title"]
+            del state_args["ars_create_return"]
+
+
+def ars_create_picture_photo(id, state_args, handler_arg):
+    state_args["picture"] = process_phone_input(handler_arg)
+    return ars_confirm_id
+
+
+ars_confirm_id = "ars_confirm"
+
+
+def ars_confirm_show(id, state_args):
+    return {
+        "text": "Подтвердите:\nНазвание: "
+        + state_args["title"]
+        + "\n"
+        + "Описание: "
+        + state_args["description"]
+        + "\n"
+        + "Адрес: "
+        + state_args["address"]
+        + "\n"
+        + "Номер телефона: "
+        + state_args["phone"],
+        "photo": state_args["picture"],
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_create_picture_id}],
+            [
+                {
+                    "text": "Подтвердить",
                     "callback": {
-                        "state_id": (arses_id if create else ars_id),
-                        "handler_arg": "skip",
+                        "state_id": state_args["ars_create_return"],
+                        "handler_arg": "confirm",
                     },
                 }
             ],
             [
                 {
                     "text": "Отменить",
-                    "callback": (arses_id if create else ars_id),
+                    "callback": state_args["ars_create_return"],
                 }
             ],
         ],
     }
 
 
-def ars_input_picture_callback(id, state_args, state_id, handler_arg):
-    if handler_arg == "skip":
-        if state_id == arses_id:
+def ars_confirm_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_create_picture_id, state_args["ars_create_return"]]:
+        if handler_arg == "confirm":
             with Session(engine) as session:
                 session.add(
                     Ars(
@@ -312,54 +295,20 @@ def ars_input_picture_callback(id, state_args, state_id, handler_arg):
                         latitude=state_args["latitude"],
                         longitude=state_args["longitude"],
                         phone=state_args["phone"],
+                        picture=state_args["picture"],
                         user_id=id,
                     )
                 )
                 session.commit()
-        else:
-            with Session(engine) as session:
-                session.get(Ars, state_args["id"]).picture = None
-                session.commit()
-    if state_id in [ars_input_phone_id, arses_id]:
-        del state_args["phone"]
-        if state_id == arses_id:
+        del state_args["picture"]
+        if state_id == state_args["ars_create_return"]:
+            del state_args["phone"]
             del state_args["address"]
             del state_args["latitude"]
             del state_args["longitude"]
             del state_args["description"]
             del state_args["title"]
-            del state_args["create"]
-
-
-def ars_input_picture_photo(id, state_args, handler_arg):
-    if "create" in state_args:
-        with Session(engine) as session:
-            session.add(
-                Ars(
-                    title=state_args["title"],
-                    description=state_args["description"],
-                    address=state_args["address"],
-                    latitude=state_args["latitude"],
-                    longitude=state_args["longitude"],
-                    phone=state_args["phone"],
-                    picture=handler_arg,
-                    user_id=id,
-                )
-            )
-            session.commit()
-        del state_args["phone"]
-        del state_args["address"]
-        del state_args["latitude"]
-        del state_args["longitude"]
-        del state_args["description"]
-        del state_args["title"]
-        del state_args["create"]
-        return arses_id
-    else:
-        with Session(engine) as session:
-            session.get(Ars, state_args["id"]).picture = handler_arg
-            session.commit()
-        return ars_id
+            del state_args["ars_create_return"]
 
 
 ars_id = "ars"
@@ -388,52 +337,51 @@ def ars_show(id, state_args):
         + "\n"
         + "Номер телефона: "
         + ars_dict["phone"],
-        "photo": ars.picture,
+        "photo": ars_dict["picture"],
         "keyboard": [
-            [{"text": "Назад", "callback": arses_id}],
-            [{"text": "Специализации СТО", "callback": ars_specs_id}],
-            [{"text": "Вендоры СТО", "callback": ars_vendors_id}],
-            [{"text": "Отзывы", "callback": feedbacks_id}],
+            [
+                {
+                    "text": "Назад",
+                    "callback": state_args["ars_return"],
+                }
+            ]
         ]
         + (
             [
                 [
                     {
                         "text": "Изменить название",
-                        "callback": ars_input_title_id,
+                        "callback": ars_edit_title_id,
                     }
                 ],
                 [
                     {
                         "text": "Изменить описание",
-                        "callback": ars_input_description_id,
+                        "callback": ars_edit_description_id,
                     }
                 ],
                 [
                     {
                         "text": "Изменить адрес",
-                        "callback": ars_input_address_id,
+                        "callback": ars_edit_address_id,
                     }
                 ],
                 [
                     {
                         "text": "Изменить номер телефона",
-                        "callback": ars_input_phone_id,
+                        "callback": ars_edit_phone_id,
                     }
                 ],
                 [
                     {
                         "text": "Изменить фотографию",
-                        "callback": ars_input_picture_id,
+                        "callback": ars_edit_picture_id,
                     }
                 ],
                 [
                     {
                         "text": "Удалить",
-                        "callback": {
-                            "state_id": arses_id,
-                            "handler_arg": "delete",
-                        },
+                        "callback": ars_delete_id,
                     }
                 ],
             ]
@@ -444,16 +392,346 @@ def ars_show(id, state_args):
 
 
 def ars_callback(id, state_args, state_id, handler_arg):
-    if state_id == arses_id:
-        if handler_arg == "delete":
-            with Session(engine) as session:
-                session.delete(session.get(Ars, state_args["id"]))
-                session.commit()
+    if state_id == state_args["ars_return"]:
         del state_args["id"]
-    elif state_id in [ars_specs_id, ars_vendors_id, feedbacks_id]:
-        state_args["ars_id"] = state_args["id"]
-        del state_args["id"]
+        del state_args["ars_return"]
 
+
+ars_edit_title_id = "ars_edit_title"
+
+
+def ars_edit_title_show(id, state_args):
+    return {
+        "text": "Введите новое название",
+        "keyboard": [[{"text": "Отменить", "callback": ars_id}]],
+    }
+
+
+def ars_edit_title_text(id, state_args, handler_arg):
+    try:
+        state_args["title"] = process_title_input(handler_arg)
+        return ars_confirm_title_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return ars_edit_title_id
+
+
+ars_confirm_title_id = "ars_confirm_title"
+
+
+def ars_confirm_title_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["title"],
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_edit_title_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {"state_id": ars_id, "handler_arg": "confirm"},
+                }
+            ],
+            [{"text": "Отменить", "callback": ars_id}],
+        ],
+    }
+
+
+def ars_confirm_title_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_edit_title_id, ars_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(Ars, state_args["id"]).title = state_args["title"]
+                session.commit()
+        del state_args["title"]
+
+
+ars_edit_description_id = "ars_edit_description"
+
+
+def ars_edit_description_show(id, state_args):
+    return {
+        "text": "Введите новое описание",
+        "keyboard": [[{"text": "Отменить", "callback": ars_id}]],
+    }
+
+
+def ars_edit_description_text(id, state_args, handler_arg):
+    try:
+        state_args["description"] = process_description_input(handler_arg)
+        return ars_confirm_description_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return ars_edit_description_id
+
+
+ars_confirm_description_id = "ars_confirm_description"
+
+
+def ars_confirm_description_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["description"],
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_edit_description_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {"state_id": ars_id, "handler_arg": "confirm"},
+                }
+            ],
+            [{"text": "Отменить", "callback": ars_id}],
+        ],
+    }
+
+
+def ars_confirm_description_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_edit_description_id, ars_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(Ars, state_args["id"]).description = state_args[
+                    "description"
+                ]
+                session.commit()
+        del state_args["description"]
+
+
+ars_edit_address_id = "ars_edit_address"
+
+
+def ars_edit_address_show(id, state_args):
+    return {
+        "text": "Введите новый адрес",
+        "keyboard": [[{"text": "Отменить", "callback": ars_id}]],
+    }
+
+
+def ars_edit_address_text(id, state_args, handler_arg):
+    try:
+        latitude, longitude = process_address_input(handler_arg)
+        state_args["address"] = handler_arg
+        state_args["latitude"] = latitude
+        state_args["longitude"] = longitude
+        return ars_confirm_address_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return ars_edit_address_id
+
+
+ars_confirm_address_id = "ars_confirm_address"
+
+
+def ars_confirm_address_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["address"],
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_edit_address_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {"state_id": ars_id, "handler_arg": "confirm"},
+                }
+            ],
+            [{"text": "Отменить", "callback": ars_id}],
+        ],
+    }
+
+
+def ars_confirm_address_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_edit_address_id, ars_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                ars = session.get(Ars, state_args["id"])
+                ars.address = state_args["address"]
+                ars.latitude = state_args["latitude"]
+                ars.longitude = state_args["longitude"]
+                session.commit()
+        del state_args["address"]
+        del state_args["latitude"]
+        del state_args["longitude"]
+
+
+ars_edit_phone_id = "ars_edit_phone"
+
+
+def ars_edit_phone_show(id, state_args):
+    return {
+        "text": "Введите новый номер телефона",
+        "keyboard": [[{"text": "Отменить", "callback": ars_id}]],
+    }
+
+
+def ars_edit_phone_text(id, state_args, handler_arg):
+    try:
+        state_args["phone"] = process_phone_input(handler_arg)
+        return ars_confirm_phone_id
+    except Exception as e:
+        state_args["status"] = str(e)
+        return ars_edit_phone_id
+
+
+ars_confirm_phone_id = "ars_confirm_phone"
+
+
+def ars_confirm_phone_show(id, state_args):
+    return {
+        "text": "Подтвердите: " + state_args["phone"],
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_edit_phone_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {"state_id": ars_id, "handler_arg": "confirm"},
+                }
+            ],
+            [{"text": "Отменить", "callback": ars_id}],
+        ],
+    }
+
+
+def ars_confirm_phone_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_edit_phone_id, ars_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(Ars, state_args["id"]).phone = state_args["phone"]
+                session.commit()
+        del state_args["phone"]
+
+
+ars_edit_picture_id = "ars_edit_picture"
+
+
+def ars_edit_picture_show(id, state_args):
+    return {
+        "text": "Отправьте новую фотографию",
+        "keyboard": [
+            [{"text": "Пропустить", "callback": ars_confirm_picture_id}],
+            [{"text": "Отменить", "callback": ars_id}],
+        ],
+    }
+
+
+def ars_edit_picture_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_confirm_picture_id:
+        state_args["picture"] = None
+
+
+def ars_edit_picture_photo(id, state_args, handler_arg):
+    state_args["picture"] = handler_arg
+    return ars_confirm_picture_id
+
+
+ars_confirm_picture_id = "ars_confirm_picture"
+
+
+def ars_confirm_picture_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "photo": state_args["picture"],
+        "keyboard": [
+            [{"text": "Назад", "callback": ars_edit_picture_id}],
+            [
+                {
+                    "text": "Подтвердить",
+                    "callback": {"state_id": ars_id, "handler_arg": "confirm"},
+                }
+            ],
+            [{"text": "Отменить", "callback": ars_id}],
+        ],
+    }
+
+
+def ars_confirm_picture_callback(id, state_args, state_id, handler_arg):
+    if state_id in [ars_edit_picture_id, ars_id]:
+        if handler_arg == "confirm":
+            with Session(engine) as session:
+                session.get(Ars, state_args["id"]).picture = state_args[
+                    "picture"
+                ]
+                session.commit()
+        del state_args["picture"]
+
+
+ars_delete_id = "ars_delete"
+
+
+def ars_delete_show(id, state_args):
+    return {
+        "text": "Подтвердите",
+        "keyboard": [
+            [{"text": "Подтвердить", "callback": state_args["ars_return"]}],
+            [{"text": "Отменить", "callback": ars_id}],
+        ],
+    }
+
+
+def ars_delete_callback(id, state_args, state_id, handler_arg):
+    if state_id == state_args["ars_return"]:
+        with Session(engine) as session:
+            session.delete(session.get(Ars, state_args["id"]))
+            session.commit()
+        del state_args["id"]
+        del state_args["ars_return"]
+
+
+requests_id = "requests"
+
+
+def requests_show(id, state_args):
+    return {
+        "text": "Аукцион заявок",
+        "keyboard": [[{"text": "Назад", "callback": main_id}]],
+    }
+
+
+diller_id = "diller"
+
+
+def diller_show(id, state_args):
+    with Session(engine) as session:
+        arses_list = [
+            {"id": ars.id, "title": ars.title}
+            for ars in session.query(Ars).where(Ars.user_id == id)
+        ]
+    return {
+        "text": "Кабинет диллера",
+        "keyboard": [
+            [
+                {"text": "Назад", "callback": main_id},
+                {"text": "Создать", "callback": ars_create_title_id},
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": ars_dict["title"],
+                    "callback": {
+                        "state_id": ars_id,
+                        "handler_arg": str(ars_dict["id"]),
+                    },
+                }
+            ]
+            for ars_dict in arses_list
+        ],
+    }
+
+
+def diller_callback(id, state_args, state_id, handler_arg):
+    if state_id == ars_id:
+        state_args["ars_return"] = diller_id
+        state_args["id"] = int(handler_arg)
+    elif state_id == ars_create_title_id:
+        state_args["ars_create_return"] = diller_id
+
+
+client_id = "client"
+
+
+def client_show(id, state_args):
+    return {
+        "text": "Кабинет клиента",
+        "keyboard": [[{"text": "Назад", "callback": main_id}]],
+    }
+
+
+"""
 
 ars_specs_id = "ars_specs"
 
@@ -812,12 +1090,9 @@ requests_id = "requests"
 
 
 def requests_show(id, state_args):
-    client = "client" in state_args
     return {
         "text": "Аукцион заявок",
-        "keyboard": [
-            [{"text": "Назад", "callback": (client_id if client else main_id)}]
-        ],
+        "keyboard": [[{"text": "Назад", "callback": main_id}]],
     }
 
 
@@ -825,18 +1100,39 @@ diller_id = "diller"
 
 
 def diller_show(id, state_args):
+    with Session(engine) as session:
+        arses_list = [
+            {"id": ars.id, "title": ars.title}
+            for ars in session.query(Ars).where(Ars.user_id == id)
+        ]
     return {
         "text": "Кабинет диллера",
         "keyboard": [
-            [{"text": "Назад", "callback": main_id}],
-            [{"text": "СТО", "callback": arses_id}],
+            [
+                {"text": "Назад", "callback": main_id},
+                {"text": "Создать", "callback": ars_create_title_id},
+            ]
+        ]
+        + [
+            [
+                {
+                    "text": ars_dict["title"],
+                    "callback": {
+                        "state_id": ars_id,
+                        "handler_arg": str(ars_dict["id"]),
+                    },
+                }
+            ]
+            for ars_dict in arses_list
         ],
     }
 
 
 def diller_callback(id, state_args, state_id, handler_arg):
-    if state_id == main_id:
-        del state_args["diller"]
+    if state_id == ars_create_title_id:
+        state_args["ars_create_return"] = diller_id
+    elif state_id == ars_id:
+        state_args["ars_return"] = diller_id
 
 
 client_id = "client"
@@ -845,21 +1141,9 @@ client_id = "client"
 def client_show(id, state_args):
     return {
         "text": "Кабинет клиента",
-        "keyboard": [
-            [{"text": "Назад", "callback": main_id}],
-            [{"text": "Заявки", "callback": requests_id}],
-        ],
+        "keyboard": [[{"text": "Назад", "callback": main_id}]],
     }
 
-
-def client_callback(id, state_args, state_id, handler_arg):
-    if state_id == main_id:
-        del state_args["client"]
-
-
-#  STOOOOOOOOOOOOOOOOOOP
-
-"""
 
 ars_specs_id = 61
 
@@ -1878,7 +2162,7 @@ def diller_ars_spec_show(id, state_args):
             ],
             [
                 {
-                    "text": "Изменить верхнюю цену",
+                    "text": "Изменить в��рхнюю цену",
                     "callback": update_ars_spec_input_cost_ceil_id,
                 }
             ],
