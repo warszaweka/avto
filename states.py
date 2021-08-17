@@ -645,7 +645,7 @@ def ars_spec_input_cost_ceil_callback(id, state_args, state_id, handler_arg):
                     ArsSpec(
                         ars_id=state_args["ars_id"],
                         spec_id=state_args["spec_id"],
-                        cost_floor=state_args["cost_floor"]
+                        cost_floor=state_args["cost_floor"],
                     )
                 )
                 session.commit()
@@ -676,7 +676,7 @@ def ars_spec_input_cost_ceil_text(id, state_args, handler_arg):
                         ars_id=state_args["ars_id"],
                         spec_id=state_args["spec_id"],
                         cost_floor=state_args["cost_floor"],
-                        cost_ceil=handler_arg
+                        cost_ceil=handler_arg,
                     )
                 )
                 session.commit()
@@ -717,7 +717,7 @@ def ars_spec_show(id, state_args):
         admin = id == ars_spec.ars.user_id
     return {
         "text": "Название: "
-        + ars_spec_dict["title"]
+        + ars_spec_dict["spec_title"]
         + "\n"
         + (
             "Нижняя цена: "
