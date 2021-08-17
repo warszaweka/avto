@@ -75,7 +75,7 @@ def ars_create_title_show(id, state_args):
     return {
         "text": "Введите название",
         "keyboard": [
-            [{"text": "Отменить", "callback": state_args["ars_create_retun"]}]
+            [{"text": "Отменить", "callback": state_args["ars_create_return"]}]
         ],
     }
 
