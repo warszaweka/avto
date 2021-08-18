@@ -3117,7 +3117,7 @@ def offer_callback(id, state_args, state_id, handler_arg):
         del state_args["ars_id"]
     elif state_id == ars_id:
         state_args["id"] = state_args["ars_id"]
-        state_args["request_return"] = state_args["request_id"]
+        state_args["ars_return"] = state_args["request_id"]
         del state_args["request_id"]
         del state_args["ars_id"]
 
