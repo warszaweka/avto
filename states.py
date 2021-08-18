@@ -3042,7 +3042,9 @@ def offer_show(id, state_args):
                         else main_id
                     ),
                 }
-            ]
+            ],
+            [{"text": "Заявка", "callback": request_id}],
+            [{"text": "СТО", "callback": ars_id}],
         ]
         + (
             [
@@ -3108,6 +3110,16 @@ def offer_callback(id, state_args, state_id, handler_arg):
                 del state_args["request_return"]
             del state_args["request_id"]
             del state_args["ars_id"]
+    elif state_id == request_id:
+        state_args["id"] = state_args["request_id"]
+        state_args["request_return"] = state_args["ars_id"]
+        del state_args["request_id"]
+        del state_args["ars_id"]
+    elif state_id == ars_id:
+        state_args["id"] = state_args["ars_id"]
+        state_args["request_return"] = state_args["request_id"]
+        del state_args["request_id"]
+        del state_args["ars_id"]
 
 
 offer_edit_cost_floor_id = "offer_edit_cost_floor"
