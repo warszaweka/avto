@@ -21,9 +21,8 @@ def process_title_input(input):
 
 def process_description_input(input):
     if len(input) > DESCRIPTION_LENGTH:
-        raise Exception(
-            "Количество символов превышает " + str(DESCRIPTION_LENGTH)
-        )
+        raise Exception("Количество символов превышает " +
+                        str(DESCRIPTION_LENGTH))
     return input
 
 

@@ -13,6 +13,10 @@ psycogreen = "*"
 requests = "*"
 
 [dev-packages]
+pynvim = "*"
+pylint = "*"
+yapf = "*"
+isort = "*"
 
 [requires]
 python_version = "3.9"

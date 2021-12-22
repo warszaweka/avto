@@ -18,12 +18,11 @@ from sqlalchemy.orm import Session
 
 import states
 from models import Callback, DeclarativeBase, User
-from states import main_id, set_engine
 from processors import set_nv_key
+from states import main_id, set_engine
 
 engine = create_engine(
-    sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1)
-)
+    sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1))
 DeclarativeBase.metadata.create_all(engine)
 set_engine(engine)
 
@@ -84,11 +83,8 @@ def tg_handler(data):
 
     user_exists = False
     with Session(engine) as session:
-        user = (
-            session.execute(select(User).where(User.tg_id == tg_id))
-            .scalars()
-            .first()
-        )
+        user = (session.execute(
+            select(User).where(User.tg_id == tg_id)).scalars().first())
         if user:
             user_exists = True
 
@@ -106,22 +102,27 @@ def tg_handler(data):
                     {
                         "chat_id": tg_id,
                         "message_id": tg_message_id,
-                        "media": {"type": "photo", "media": wp_id},
+                        "media": {
+                            "type": "photo",
+                            "media": wp_id
+                        },
                     },
                 )
             except Exception:
-                tg_message_id = tg_request(
-                    "sendPhoto", {"chat_id": tg_id, "photo": wp_id}
-                )["message_id"]
+                tg_message_id = tg_request("sendPhoto", {
+                    "chat_id": tg_id,
+                    "photo": wp_id
+                })["message_id"]
                 with Session(engine) as session:
                     session.get(User, id).tg_message_id = tg_message_id
                     session.commit()
 
                 handling = False
         else:
-            tg_message_id = tg_request(
-                "sendPhoto", {"chat_id": tg_id, "photo": wp_id}
-            )["message_id"]
+            tg_message_id = tg_request("sendPhoto", {
+                "chat_id": tg_id,
+                "photo": wp_id
+            })["message_id"]
             state_id = main_id
             state_args = {}
             callbacks_list = []
@@ -183,11 +184,13 @@ def tg_handler(data):
         "chat_id": tg_id,
         "message_id": tg_message_id,
         "media": {
-            "type": "photo",
-            "media": render_message["photo"]
-            if ("photo" in render_message and render_message["photo"])
-            else wp_id,
-            "caption": status + render_message["text"],
+            "type":
+            "photo",
+            "media":
+            render_message["photo"] if
+            ("photo" in render_message and render_message["photo"]) else wp_id,
+            "caption":
+            status + render_message["text"],
         },
         "reply_markup": {
             "inline_keyboard": [],
@@ -196,20 +199,17 @@ def tg_handler(data):
     for render_row in render_message["keyboard"]:
         rendered_row = []
         for render_button in render_row:
-            callback_data = (
-                render_button["callback"]
-                if isinstance(render_button["callback"], str)
-                else render_button["callback"]["state_id"]
-                + ":"
-                + render_button["callback"]["handler_arg"]
-            )
+            callback_data = (render_button["callback"] if isinstance(
+                render_button["callback"],
+                str) else render_button["callback"]["state_id"] + ":" +
+                             render_button["callback"]["handler_arg"])
             callbacks_list.append(callback_data)
-            rendered_row.append(
-                {"text": render_button["text"], "callback_data": callback_data}
-            )
+            rendered_row.append({
+                "text": render_button["text"],
+                "callback_data": callback_data
+            })
         rendered_message["reply_markup"]["inline_keyboard"].append(
-            rendered_row
-        )
+            rendered_row)
     tg_request("editMessageMedia", rendered_message)
     with Session(engine) as session:
         user = session.get(User, id)
