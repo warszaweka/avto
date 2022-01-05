@@ -54,6 +54,26 @@ def add_callback_data(callbacks_list, callback_data):
 
 
 def tg_handler(data):
+    # START DEBUG
+    tg_request(
+        "sendMessage",
+        {
+            "chat_id": data["message"]["from"]["id"],
+            "text": "lol",
+            "reply_markup": {
+                "keyboard": [
+                    [
+                        {
+                            "text": "buttontext",
+                            "request_contact": True,
+                        },
+                    ],
+                ],
+                "input_field_placeholder": "ahaha",
+            },
+        },
+    )
+    # END DEBUG
     handling = True
 
     start = False
