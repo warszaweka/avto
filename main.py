@@ -8,6 +8,7 @@ patch_psycopg()
 
 from os import getenv
 from re import sub
+from sys import stderr # DEBUG
 
 from flask import Flask, request
 from gevent import spawn
@@ -54,6 +55,7 @@ def add_callback_data(callbacks_list, callback_data):
 
 
 def tg_handler(data):
+    print("kek", file=stderr)
     handling = True
 
     start = False
