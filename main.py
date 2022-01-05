@@ -57,7 +57,7 @@ def add_callback_data(callbacks_list, callback_data):
 def tg_handler(data):
     print(data, file=stderr) # DEBUG
     # START DEBUG
-    if data["message"]["text"] == "contact" or data["message"]["text"] == "contact1":
+    if "message" in data and "text" in data["message"] and (data["message"]["text"] == "contact" or data["message"]["text"] == "contact1"):
         tg_request(
             "sendMessage",
             {
