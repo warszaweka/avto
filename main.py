@@ -44,6 +44,7 @@ def tg_request(method, data):
         url="https://api.telegram.org/bot" + tg_token + "/" + method,
         json=data,
     ).json()
+    print(response, file=stderr) # DEBUG
     if not response["ok"]:
         raise TgRequestException(response["description"])
     return response["result"]
