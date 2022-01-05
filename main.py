@@ -16,21 +16,26 @@ from sqlalchemy import select
 from sqlalchemy.future import create_engine
 from sqlalchemy.orm import Session
 
-import states
-from models import Callback, DeclarativeBase, User
-from processors import set_nv_key
-from states import main_id, set_engine
+from src import states
+from src.models import Callback, DeclarativeBase, User
+from src.processors import nv_key
+from src.states import MAIN_ID
+from src.states import engine as states_engine
 
 engine = create_engine(
     sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1))
 DeclarativeBase.metadata.create_all(engine)
-set_engine(engine)
+states_engine["value"] = engine
 
 tg_token = getenv("TG_TOKEN")
 
 wp_id = getenv("WP_ID")
 
-set_nv_key(getenv("NV_KEY"))
+nv_key["value"] = getenv("NV_KEY")
+
+
+class TgRequestException(Exception):
+    pass
 
 
 def tg_request(method, data):
@@ -39,7 +44,7 @@ def tg_request(method, data):
         json=data,
     ).json()
     if not response["ok"]:
-        raise Exception(response["description"])
+        raise TgRequestException(response["description"])
     return response["result"]
 
 
@@ -64,18 +69,18 @@ def tg_handler(data):
         )
 
         if "text" in data["message"]:
-            type = "text"
+            update_type = "text"
             handler_arg = data["message"]["text"]
 
             if handler_arg == "/start":
                 start = True
         elif "photo" in data["message"]:
-            type = "photo"
+            update_type = "photo"
             handler_arg = data["message"]["photo"][0]["file_id"]
         else:
             return
     elif "callback_query" in data:
-        type = "callback"
+        update_type = "callback"
         tg_id = data["callback_query"]["from"]["id"]
         handler_arg = data["callback_query"]["data"]
     else:
@@ -88,7 +93,7 @@ def tg_handler(data):
         if user:
             user_exists = True
 
-            id = user.id
+            user_id = user.id
             tg_message_id = user.tg_message_id
             state_id = user.state_id
             state_args = user.state_args
@@ -108,13 +113,13 @@ def tg_handler(data):
                         },
                     },
                 )
-            except Exception:
+            except TgRequestException:
                 tg_message_id = tg_request("sendPhoto", {
                     "chat_id": tg_id,
                     "photo": wp_id
                 })["message_id"]
                 with Session(engine) as session:
-                    session.get(User, id).tg_message_id = tg_message_id
+                    session.get(User, user_id).tg_message_id = tg_message_id
                     session.commit()
 
                 handling = False
@@ -123,7 +128,7 @@ def tg_handler(data):
                 "chat_id": tg_id,
                 "photo": wp_id
             })["message_id"]
-            state_id = main_id
+            state_id = MAIN_ID
             state_args = {}
             callbacks_list = []
             with Session(engine) as session:
@@ -135,7 +140,7 @@ def tg_handler(data):
                 )
                 session.add(user)
                 session.commit()
-                id = user.id
+                user_id = user.id
 
             handling = False
     elif not user_exists:
@@ -143,10 +148,10 @@ def tg_handler(data):
 
     if handling:
         handled = False
-        handler = getattr(states, state_id + "_" + type, None)
-        if type in ["text", "photo"]:
+        handler = getattr(states, state_id + "_" + update_type, None)
+        if update_type in ["text", "photo"]:
             if handler:
-                handler_return = handler(id, state_args, handler_arg)
+                handler_return = handler(user_id, state_args, handler_arg)
                 if handler_return:
                     state_id = handler_return
                     handled = True
@@ -157,7 +162,8 @@ def tg_handler(data):
                 state_id = handler_arg
                 handler_arg = None
             if handler:
-                handler_return = handler(id, state_args, state_id, handler_arg)
+                handler_return = handler(user_id, state_args, state_id,
+                                         handler_arg)
                 if handler_return:
                     state_id = handler_return
             handled = True
@@ -165,7 +171,7 @@ def tg_handler(data):
             return
         if handled:
             with Session(engine) as session:
-                user = session.get(User, id)
+                user = session.get(User, user_id)
                 user.state_id = state_id
                 user.state_args = state_args
                 session.commit()
@@ -175,10 +181,10 @@ def tg_handler(data):
         status = state_args["status"] + "\n\n"
         del state_args["status"]
         with Session(engine) as session:
-            user = session.get(User, id)
+            user = session.get(User, user_id)
             user.state_args = state_args
             session.commit()
-    render_message = getattr(states, state_id + "_show")(id, state_args)
+    render_message = getattr(states, state_id + "_show")(user_id, state_args)
     callbacks_list = []
     rendered_message = {
         "chat_id": tg_id,
@@ -212,11 +218,11 @@ def tg_handler(data):
             rendered_row)
     tg_request("editMessageMedia", rendered_message)
     with Session(engine) as session:
-        user = session.get(User, id)
+        user = session.get(User, user_id)
         for callback in user.callbacks:
             session.delete(callback)
         for callback_data in callbacks_list:
-            session.add(Callback(data=callback_data, user_id=id))
+            session.add(Callback(data=callback_data, user_id=user_id))
         session.commit()
 
 
