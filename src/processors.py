@@ -1,14 +1,6 @@
-from re import compile as re_compile
-from re import sub
-
 from requests import get
 
 from .models import ADDRESS_LENGTH, DESCRIPTION_LENGTH, TITLE_LENGTH
-
-nv_key = {
-    "value": None,
-}
-phone_sub_pattern = re_compile(r"^\+?38")
 
 
 class ProcessException(Exception):
@@ -53,20 +45,6 @@ def process_cost_input(process_input, cost_floor=None, cost_ceil=None):
         raise ProcessException(
             "Нижняя граница диапазона не ниже верхней границы")
     return process_input
-
-
-def process_phone_input(process_input):
-    response = get(
-        url="http://apilayer.net/api/validate",
-        params={
-            "access_key": nv_key["value"],
-            "number": sub(phone_sub_pattern, "", process_input),
-            "country_code": "UA",
-        },
-    ).json()
-    if not response["valid"]:
-        raise ProcessException("Недействительный номер")
-    return response["local_format"]
 
 
 def process_address_input(process_input):

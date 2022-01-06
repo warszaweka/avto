@@ -4,8 +4,7 @@ from .models import (Ars, ArsSpec, ArsVendor, Feedback, Offer, Request,
                      RequestSpec, Spec, Vendor)
 from .processors import (ProcessException, process_address_input,
                          process_cost_input, process_description_input,
-                         process_phone_input, process_stars_input,
-                         process_title_input)
+                         process_stars_input, process_title_input)
 
 engine = {
     "value": None,
@@ -335,7 +334,7 @@ def ars_create_phone_callback(user_id, state_args, state_id, handler_arg):
 
 def ars_create_phone_text(user_id, state_args, handler_arg):
     try:
-        state_args["phone"] = process_phone_input(handler_arg)
+        state_args["phone"] = handler_arg[:10]
         return ARS_CREATE_PICTURE_ID
     except ProcessException as exception:
         state_args["status"] = str(exception)
@@ -745,7 +744,7 @@ def ars_edit_phone_show(user_id, state_args):
 
 def ars_edit_phone_text(user_id, state_args, handler_arg):
     try:
-        state_args["phone"] = process_phone_input(handler_arg)
+        state_args["phone"] = handler_arg[:10]
         return ARS_CONFIRM_PHONE_ID
     except ProcessException as exception:
         state_args["status"] = str(exception)
@@ -2141,7 +2140,7 @@ def request_create_phone_callback(user_id, state_args, state_id, handler_arg):
 
 def request_create_phone_text(user_id, state_args, handler_arg):
     try:
-        state_args["phone"] = process_phone_input(handler_arg)
+        state_args["phone"] = handler_arg[:10]
         return REQUEST_CREATE_PICTURE_ID
     except ProcessException as exception:
         state_args["status"] = str(exception)
@@ -2466,7 +2465,7 @@ def request_edit_phone_show(user_id, state_args):
 
 def request_edit_phone_text(user_id, state_args, handler_arg):
     try:
-        state_args["phone"] = process_phone_input(handler_arg)
+        state_args["phone"] = handler_arg[:10]
         return REQUEST_CONFIRM_PHONE_ID
     except ProcessException as exception:
         state_args["status"] = str(exception)

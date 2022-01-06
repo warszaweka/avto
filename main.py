@@ -6,9 +6,10 @@ from psycogreen.gevent import patch_psycopg
 
 patch_psycopg()
 
+from json import dumps
 from os import getenv
 from re import sub
-from sys import stderr # DEBUG
+from sys import stderr
 
 from flask import Flask, request
 from gevent import spawn
@@ -19,7 +20,6 @@ from sqlalchemy.orm import Session
 
 from src import states
 from src.models import Callback, DeclarativeBase, User
-from src.processors import nv_key
 from src.states import MAIN_ID
 from src.states import engine as states_engine
 
@@ -32,8 +32,6 @@ tg_token = getenv("TG_TOKEN")
 
 wp_id = getenv("WP_ID")
 
-nv_key["value"] = getenv("NV_KEY")
-
 
 class TgRequestException(Exception):
     pass
@@ -44,25 +42,183 @@ def tg_request(method, data):
         url="https://api.telegram.org/bot" + tg_token + "/" + method,
         json=data,
     ).json()
-    print(response, file=stderr) # DEBUG
+    print("request: " + dumps(data, indent=2) + "\nresponse: " +
+          dumps(response, indent=2),
+          file=stderr)
     if not response["ok"]:
         raise TgRequestException(response["description"])
     return response["result"]
 
 
-def add_callback_data(callbacks_list, callback_data):
-    callbacks_list.append(callback_data)
-    return callback_data
-
-
 def tg_handler(data):
-    print(data, file=stderr) # DEBUG
-    handling = True
+    print("update: " + dumps(data, indent=2), file=stderr)
 
-    start = False
+    is_message = False
+    update_type = None
     if "message" in data:
+        is_message = True
         tg_id = data["message"]["from"]["id"]
+        if "text" in data["message"]:
+            update_type = "text"
+            handler_arg = data["message"]["text"]
+        elif "photo" in data["message"]:
+            update_type = "photo"
+            handler_arg = data["message"]["photo"][0]["file_id"]
+    elif "callback_query" in data:
+        tg_id = data["callback_query"]["from"]["id"]
+        update_type = "callback"
+        handler_arg = data["callback_query"]["data"]
 
+    if update_type is not None:
+        user_id = None
+        with Session(engine) as session:
+            user = (session.execute(
+                select(User).where(User.tg_id == tg_id)).scalars().first())
+            if user:
+                user_id = user.id
+                tg_message_id = user.tg_message_id
+                state_id = user.state_id
+                state_args = user.state_args
+                callbacks_list = [callback.data for callback in user.callbacks]
+
+        automaton = True
+        start = False
+        if update_type == "text" and handler_arg == "/start":
+            start = True
+            if user_id is not None:
+                try:
+                    tg_request(
+                        "editMessageMedia",
+                        {
+                            "chat_id": tg_id,
+                            "message_id": tg_message_id,
+                            "media": {
+                                "type": "photo",
+                                "media": wp_id
+                            },
+                        },
+                    )
+                except TgRequestException:
+                    tg_message_id = tg_request("sendPhoto", {
+                        "chat_id": tg_id,
+                        "photo": wp_id
+                    })["message_id"]
+                    with Session(engine) as session:
+                        session.get(User,
+                                    user_id).tg_message_id = tg_message_id
+                        session.commit()
+                    automaton = False
+            else:
+                tg_message_id = tg_request("sendPhoto", {
+                    "chat_id": tg_id,
+                    "photo": wp_id
+                })["message_id"]
+                state_id = MAIN_ID
+                state_args = {}
+                callbacks_list = []
+                with Session(engine) as session:
+                    user = User(
+                        tg_id=tg_id,
+                        tg_message_id=tg_message_id,
+                        state_id=state_id,
+                        state_args=state_args,
+                    )
+                    session.add(user)
+                    session.commit()
+                    user_id = user.id
+                automaton = False
+
+        if user_id is not None:
+            automatoned = False
+            if automaton:
+                automaton_handler = getattr(states,
+                                            state_id + "_" + update_type, None)
+                if update_type in ["text", "photo"]:
+                    if automaton_handler:
+                        automaton_return = automaton_handler(
+                            user_id, state_args, handler_arg)
+                        if automaton_return:
+                            state_id = automaton_return
+                            automatoned = True
+                elif handler_arg in callbacks_list:
+                    if ":" in handler_arg:
+                        state_id, handler_arg = handler_arg.split(":")
+                    else:
+                        state_id = handler_arg
+                        handler_arg = None
+                    if automaton_handler:
+                        automaton_return = automaton_handler(
+                            user_id, state_args, state_id, handler_arg)
+                        if automaton_return:
+                            state_id = automaton_return
+                    automatoned = True
+            if automatoned:
+                with Session(engine) as session:
+                    user = session.get(User, user_id)
+                    user.state_id = state_id
+                    user.state_args = state_args
+                    session.commit()
+
+            if start or automatoned:
+                status = None
+                if "status" in state_args:
+                    status = state_args["status"]
+                    del state_args["status"]
+                    with Session(engine) as session:
+                        user = session.get(User, user_id)
+                        user.state_args = state_args
+                        session.commit()
+
+                callbacks_list = []
+                render_message = getattr(states,
+                                         state_id + "_show")(user_id,
+                                                             state_args)
+                rendered_message = {
+                    "chat_id": tg_id,
+                    "message_id": tg_message_id,
+                    "media": {
+                        "type":
+                        "photo",
+                        "media":
+                        render_message["photo"] if
+                        ("photo" in render_message
+                         and render_message["photo"]) else wp_id,
+                        "caption":
+                        (status + "\n\n" if status is not None else "") +
+                        render_message["text"],
+                    },
+                    "reply_markup": {
+                        "inline_keyboard": [],
+                    },
+                }
+                for render_row in render_message["keyboard"]:
+                    rendered_row = []
+                    for render_button in render_row:
+                        callback_data = (
+                            render_button["callback"] if isinstance(
+                                render_button["callback"], str) else
+                            render_button["callback"]["state_id"] + ":" +
+                            render_button["callback"]["handler_arg"])
+                        callbacks_list.append(callback_data)
+                        rendered_row.append({
+                            "text": render_button["text"],
+                            "callback_data": callback_data
+                        })
+                    rendered_message["reply_markup"]["inline_keyboard"].append(
+                        rendered_row)
+
+                with Session(engine) as session:
+                    user = session.get(User, user_id)
+                    for callback in user.callbacks:
+                        session.delete(callback)
+                    for callback_data in callbacks_list:
+                        session.add(
+                            Callback(data=callback_data, user_id=user_id))
+                    session.commit()
+
+                tg_request("editMessageMedia", rendered_message)
+
+    if is_message:
         tg_request(
             "deleteMessage",
             {
@@ -70,163 +226,6 @@ def tg_handler(data):
                 "message_id": data["message"]["message_id"],
             },
         )
-
-        if "text" in data["message"]:
-            update_type = "text"
-            handler_arg = data["message"]["text"]
-
-            if handler_arg == "/start":
-                start = True
-        elif "photo" in data["message"]:
-            update_type = "photo"
-            handler_arg = data["message"]["photo"][0]["file_id"]
-        else:
-            return
-    elif "callback_query" in data:
-        update_type = "callback"
-        tg_id = data["callback_query"]["from"]["id"]
-        handler_arg = data["callback_query"]["data"]
-    else:
-        return
-
-    user_exists = False
-    with Session(engine) as session:
-        user = (session.execute(
-            select(User).where(User.tg_id == tg_id)).scalars().first())
-        if user:
-            user_exists = True
-
-            user_id = user.id
-            tg_message_id = user.tg_message_id
-            state_id = user.state_id
-            state_args = user.state_args
-            callbacks_list = [callback.data for callback in user.callbacks]
-
-    if start:
-        if user_exists:
-            try:
-                tg_request(
-                    "editMessageMedia",
-                    {
-                        "chat_id": tg_id,
-                        "message_id": tg_message_id,
-                        "media": {
-                            "type": "photo",
-                            "media": wp_id
-                        },
-                    },
-                )
-            except TgRequestException:
-                tg_message_id = tg_request("sendPhoto", {
-                    "chat_id": tg_id,
-                    "photo": wp_id
-                })["message_id"]
-                with Session(engine) as session:
-                    session.get(User, user_id).tg_message_id = tg_message_id
-                    session.commit()
-
-                handling = False
-        else:
-            tg_message_id = tg_request("sendPhoto", {
-                "chat_id": tg_id,
-                "photo": wp_id
-            })["message_id"]
-            state_id = MAIN_ID
-            state_args = {}
-            callbacks_list = []
-            with Session(engine) as session:
-                user = User(
-                    tg_id=tg_id,
-                    tg_message_id=tg_message_id,
-                    state_id=state_id,
-                    state_args=state_args,
-                )
-                session.add(user)
-                session.commit()
-                user_id = user.id
-
-            handling = False
-    elif not user_exists:
-        return
-
-    if handling:
-        handled = False
-        handler = getattr(states, state_id + "_" + update_type, None)
-        if update_type in ["text", "photo"]:
-            if handler:
-                handler_return = handler(user_id, state_args, handler_arg)
-                if handler_return:
-                    state_id = handler_return
-                    handled = True
-        elif handler_arg in callbacks_list:
-            if ":" in handler_arg:
-                state_id, handler_arg = handler_arg.split(":")
-            else:
-                state_id = handler_arg
-                handler_arg = None
-            if handler:
-                handler_return = handler(user_id, state_args, state_id,
-                                         handler_arg)
-                if handler_return:
-                    state_id = handler_return
-            handled = True
-        if not (handled or start):
-            return
-        if handled:
-            with Session(engine) as session:
-                user = session.get(User, user_id)
-                user.state_id = state_id
-                user.state_args = state_args
-                session.commit()
-
-    status = ""
-    if "status" in state_args:
-        status = state_args["status"] + "\n\n"
-        del state_args["status"]
-        with Session(engine) as session:
-            user = session.get(User, user_id)
-            user.state_args = state_args
-            session.commit()
-    render_message = getattr(states, state_id + "_show")(user_id, state_args)
-    callbacks_list = []
-    rendered_message = {
-        "chat_id": tg_id,
-        "message_id": tg_message_id,
-        "media": {
-            "type":
-            "photo",
-            "media":
-            render_message["photo"] if
-            ("photo" in render_message and render_message["photo"]) else wp_id,
-            "caption":
-            status + render_message["text"],
-        },
-        "reply_markup": {
-            "inline_keyboard": [],
-        },
-    }
-    for render_row in render_message["keyboard"]:
-        rendered_row = []
-        for render_button in render_row:
-            callback_data = (render_button["callback"] if isinstance(
-                render_button["callback"],
-                str) else render_button["callback"]["state_id"] + ":" +
-                             render_button["callback"]["handler_arg"])
-            callbacks_list.append(callback_data)
-            rendered_row.append({
-                "text": render_button["text"],
-                "callback_data": callback_data
-            })
-        rendered_message["reply_markup"]["inline_keyboard"].append(
-            rendered_row)
-    tg_request("editMessageMedia", rendered_message)
-    with Session(engine) as session:
-        user = session.get(User, user_id)
-        for callback in user.callbacks:
-            session.delete(callback)
-        for callback_data in callbacks_list:
-            session.add(Callback(data=callback_data, user_id=user_id))
-        session.commit()
 
 
 flask = Flask(__name__)
