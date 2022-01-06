@@ -41,8 +41,8 @@ def tg_request(method, data):
         url="https://api.telegram.org/bot" + tg_token + "/" + method,
         json=data,
     ).json()
-    print("request: " + data + "\nresponse: " +
-          response,
+    print("request: " + str(data) + "\nresponse: " +
+          str(response),
           file=stderr)
     if not response["ok"]:
         raise TgRequestException(response["description"])
@@ -50,7 +50,7 @@ def tg_request(method, data):
 
 
 def tg_handler(data):
-    print("update: " + data, file=stderr)
+    print("update: " + str(data), file=stderr)
 
     is_message = False
     update_type = None
