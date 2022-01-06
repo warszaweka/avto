@@ -99,10 +99,6 @@ def tg_handler(data):
                     session.get(User, user_id).tg_message_id = tg_message_id
                     session.commit()
             else:
-                tg_message_id = tg_request("sendPhoto", {
-                    "chat_id": tg_id,
-                    "photo": wp_id
-                })["message_id"]
                 state_id = MAIN_ID
                 state_args = {}
                 callbacks_list = []
