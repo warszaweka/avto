@@ -113,6 +113,7 @@ def tg_handler(data):
                     session.commit()
                     user_id = user.id
         elif user_id is not None:
+            automaton = False
             automaton_handler = getattr(states, state_id + "_" + update_type,
                                         None)
             if update_type in ["text", "photo"]:
@@ -121,6 +122,7 @@ def tg_handler(data):
                         user_id, state_args, handler_arg)
                     if automaton_return:
                         state_id = automaton_return
+                        automaton = True
             elif handler_arg in callbacks_list:
                 if ":" in handler_arg:
                     state_id, handler_arg = handler_arg.split(":")
@@ -132,12 +134,14 @@ def tg_handler(data):
                         user_id, state_args, state_id, handler_arg)
                     if automaton_return:
                         state_id = automaton_return
+                automaton = True
 
-            with Session(engine) as session:
-                user = session.get(User, user_id)
-                user.state_id = state_id
-                user.state_args = state_args
-                session.commit()
+            if automaton:
+                with Session(engine) as session:
+                    user = session.get(User, user_id)
+                    user.state_id = state_id
+                    user.state_args = state_args
+                    session.commit()
 
         if user_id is not None:
             status = None
