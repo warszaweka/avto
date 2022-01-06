@@ -6,7 +6,6 @@ from psycogreen.gevent import patch_psycopg
 
 patch_psycopg()
 
-from json import dumps
 from os import getenv
 from re import sub
 from sys import stderr
@@ -42,8 +41,8 @@ def tg_request(method, data):
         url="https://api.telegram.org/bot" + tg_token + "/" + method,
         json=data,
     ).json()
-    print("request: " + dumps(data, indent=2) + "\nresponse: " +
-          dumps(response, indent=2),
+    print("request: " + data + "\nresponse: " +
+          response,
           file=stderr)
     if not response["ok"]:
         raise TgRequestException(response["description"])
@@ -51,7 +50,7 @@ def tg_request(method, data):
 
 
 def tg_handler(data):
-    print("update: " + dumps(data, indent=2), file=stderr)
+    print("update: " + data, file=stderr)
 
     is_message = False
     update_type = None
