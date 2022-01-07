@@ -12,6 +12,7 @@ from sys import stderr
 
 from flask import Flask, request
 from gevent import spawn
+from gevent.lock import BoundedSemaphore
 from requests import post
 from sqlalchemy import select
 from sqlalchemy.future import create_engine
@@ -30,6 +31,9 @@ states_engine["value"] = engine
 tg_token = getenv("TG_TOKEN")
 
 wp_id = getenv("WP_ID")
+
+tg_semaphores = {}
+dict_semaphore = BoundedSemaphore()
 
 
 def tg_request(method, data):
@@ -76,6 +80,22 @@ def tg_handler(data):
         handler_arg = data_callback_query["data"]
 
     if update_type is not None:
+        dict_semaphore.acquire()
+        if tg_id in tg_semaphores:
+            tg_semaphore = tg_semaphores[tg_id]
+            tg_semaphore["count"] += 1
+            dict_semaphore.release()
+            semaphore = tg_semaphore["semaphore"]
+        else:
+            semaphore = BoundedSemaphore()
+            tg_semaphore = {
+                "semaphore": semaphore,
+                "count": 1,
+            }
+            tg_semaphores[tg_id] = tg_semaphore
+            dict_semaphore.release()
+        semaphore.acquire()
+
         user_id = None
         with Session(engine) as session:
             user = session.execute(
@@ -242,6 +262,15 @@ def tg_handler(data):
                     with Session(engine) as session:
                         session.get(User, user_id).state_args = state_args
                         session.commit()
+
+        semaphore.release()
+        dict_semaphore.acquire()
+        tg_semaphore_count = tg_semaphore["count"]
+        if tg_semaphore_count == 1:
+            del tg_semaphores[tg_id]
+        else:
+            tg_semaphore["count"] = tg_semaphore_count - 1
+        dict_semaphore.release()
 
     if is_message:
         tg_request(

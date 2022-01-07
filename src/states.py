@@ -54,6 +54,16 @@ CLIENT_ID = "client"
 def client_show(user_id, state_args):
     return {
         "text": "Клиент",
+        "keyboard": [
+            [{
+                "text": "СТО",
+                "callback": ARSES_ID
+            }],
+            [{
+                "text": "Аукцион заявок",
+                "callback": REQUESTS_ID
+            }],
+        ],
     }
 
 
