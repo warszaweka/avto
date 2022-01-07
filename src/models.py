@@ -20,8 +20,8 @@ ADDRESS_LENGTH = 64
 
 ars_spec = Table(
     "ars_spec", DeclarativeBase.metadata,
-    Column("ars_id", BIGINT, ForeignKey("Ars.id"), primary_key=True),
-    Column("spec_id", BIGINT, ForeignKey("Spec.id"), primary_key=True))
+    Column("ars_id", BIGINT, ForeignKey("ars.id"), primary_key=True),
+    Column("spec_id", BIGINT, ForeignKey("spec.id"), primary_key=True))
 
 
 class Spec(DeclarativeBase):
