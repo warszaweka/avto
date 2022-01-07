@@ -205,49 +205,38 @@ def tg_handler(data):
 
                 tg_request("editMessageMedia", rendered_message)
 
-                if "contact" in render_message:
-                    if "_contact" not in state_args:
-                        state_args["_contact"] = True
-                        with Session(engine) as session:
-                            session.get(User, user_id).state_args = state_args
-                            session.commit()
-                    render_contact = render_message["contact"]
+                if "_contact" in state_args:
                     tg_request(
+                        "deleteMessage",
+                        {
+                            "chat_id": tg_id,
+                            "message_id": state_args["_contact"],
+                        },
+                    )
+                    del state_args["_contact"]
+                    with Session(engine) as session:
+                        session.get(User, user_id).state_args = state_args
+                        session.commit()
+                if "contact" in render_message:
+                    render_contact = render_message["contact"]
+                    state_args["_contact"] = tg_request(
                         "sendMessage", {
                             "chat_id": tg_id,
-                            "text": render_contact,
+                            "text": render_contact["text"],
                             "reply_markup": {
                                 "keyboard": [
                                     [
                                         {
-                                            "text": render_contact,
+                                            "text": render_contact["button"],
                                             "request_contact": True,
                                         },
                                     ],
                                 ],
                             },
-                        })["message_id"],
-                elif "_contact" in state_args:
-                    del state_args["_contact"]
+                        })["message_id"]
                     with Session(engine) as session:
                         session.get(User, user_id).state_args = state_args
                         session.commit()
-                    tg_request(
-                        "deleteMessage",
-                        {
-                            "chat_id":
-                            tg_id,
-                            "message_id":
-                            tg_request(
-                                "sendMessage", {
-                                    "chat_id": tg_id,
-                                    "text": "",
-                                    "reply_markup": {
-                                        "remove_keyboard": True,
-                                    },
-                                })["message_id"],
-                        },
-                    )
 
     if is_message:
         tg_request(
