@@ -64,6 +64,11 @@ def tg_handler(data):
         elif "photo" in data_message:
             update_type = "photo"
             handler_arg = data_message["photo"][0]["file_id"]
+        elif "contact" in data_message:
+            data_message_contact = data_message["contact"]
+            if data_message_contact["user_id"] == tg_id:
+                update_type = "contact"
+                handler_arg = data_message_contact["phone_number"]
     elif "callback_query" in data:
         data_callback_query = data["callback_query"]
         tg_id = data_callback_query["from"]["id"]
@@ -123,7 +128,7 @@ def tg_handler(data):
                 automaton = False
                 automaton_handler = getattr(states,
                                             state_id + "_" + update_type, None)
-                if update_type in ["text", "photo"]:
+                if update_type in ["text", "photo", "contact"]:
                     if automaton_handler is not None:
                         automaton_return = automaton_handler(
                             user_id, state_args, handler_arg)
