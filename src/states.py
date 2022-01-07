@@ -12,7 +12,7 @@ START_ID = "start"
 def start_show(user_id, state_args):
     return {
         "text": "Старт",
-        "contact": True,
+        "contact": "Номер",
     }
 
 
