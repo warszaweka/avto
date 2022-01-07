@@ -213,28 +213,20 @@ def tg_handler(data):
                             session.commit()
                     render_contact = render_message["contact"]
                     tg_request(
-                        "deleteMessage",
-                        {
-                            "chat_id":
-                            tg_id,
-                            "message_id":
-                            tg_request(
-                                "sendMessage", {
-                                    "chat_id": tg_id,
-                                    "text": render_contact,
-                                    "reply_markup": {
-                                        "keyboard": [
-                                            [
-                                                {
-                                                    "text": render_contact,
-                                                    "request_contact": True,
-                                                },
-                                            ],
-                                        ],
-                                    },
-                                })["message_id"],
-                        },
-                    )
+                        "sendMessage", {
+                            "chat_id": tg_id,
+                            "text": render_contact,
+                            "reply_markup": {
+                                "keyboard": [
+                                    [
+                                        {
+                                            "text": render_contact,
+                                            "request_contact": True,
+                                        },
+                                    ],
+                                ],
+                            },
+                        })["message_id"],
                 elif "_contact" in state_args:
                     del state_args["_contact"]
                     with Session(engine) as session:
