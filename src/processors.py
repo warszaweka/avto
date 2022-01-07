@@ -1,5 +1,4 @@
-from requests import get
-
+"""
 from .models import ADDRESS_LENGTH, DESCRIPTION_LENGTH, TITLE_LENGTH
 
 
@@ -45,21 +44,4 @@ def process_cost_input(process_input, cost_floor=None, cost_ceil=None):
         raise ProcessException(
             "Нижняя граница диапазона не ниже верхней границы")
     return process_input
-
-
-def process_address_input(process_input):
-    if len(process_input) > ADDRESS_LENGTH:
-        raise ProcessException("Количество символов превышает " +
-                               str(ADDRESS_LENGTH))
-    response = get(
-        url="https://nominatim.openstreetmap.org/search",
-        params={
-            "q": process_input,
-            "format": "json",
-            "countrycodes": "UA",
-            "limit": "1",
-        },
-    ).json()
-    if not response:
-        raise ProcessException("Несуществующий адрес")
-    return (response[0]["lat"], response[0]["lon"])
+"""

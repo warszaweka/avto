@@ -1,14 +1,46 @@
-from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import (BIGINT, BOOLEAN, JSONB, NUMERIC,
+from sqlalchemy import ForeignKey, Table
+from sqlalchemy.dialects.postgresql import (BIGINT, INTEGER, JSONB, NUMERIC,
                                             SMALLINT, VARCHAR)
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import Column
 
 DeclarativeBase = declarative_base()
 
-TITLE_LENGTH = 128
+SPEC_TITLE_LENGTH = 32
+VENDOR_TITLE_LENGTH = 32
+STATE_ID_LENGTH = 48
+PHONE_LENGTH = 13
+CALLBACK_DATA_LENGTH = 64
+YEAR_LENGTH = 4
+ARS_TITLE_LENGTH = 128
+PICTURE_LENGTH = 128
+
 DESCRIPTION_LENGTH = 2048
 ADDRESS_LENGTH = 64
+
+ars_spec = Table(
+    "ars_spec", DeclarativeBase.metadata,
+    Column("ars_id", BIGINT, ForeignKey("Ars.id"), primary_key=True),
+    Column("spec_id", BIGINT, ForeignKey("Spec.id"), primary_key=True))
+
+
+class Spec(DeclarativeBase):
+    __tablename__ = "spec"
+
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    title = Column(VARCHAR(SPEC_TITLE_LENGTH), nullable=False)
+
+    requests = relationship("Request", back_populates="spec")
+    arses = relationship("Ars", secondary=ars_spec, back_populates="specs")
+
+
+class Vendor(DeclarativeBase):
+    __tablename__ = "vendor"
+
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    title = Column(VARCHAR(VENDOR_TITLE_LENGTH), nullable=False)
+
+    autos = relationship("Auto", back_populates="vendor")
 
 
 class User(DeclarativeBase):
@@ -17,90 +49,75 @@ class User(DeclarativeBase):
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     tg_id = Column(BIGINT, index=True, nullable=False, unique=True)
     tg_message_id = Column(BIGINT, nullable=False)
-    state_id = Column(VARCHAR(48), nullable=False)
+    state_id = Column(VARCHAR(STATE_ID_LENGTH), nullable=False)
     state_args = Column(JSONB, nullable=False)
+    phone = Column(VARCHAR(PHONE_LENGTH), unique=True)
 
     callbacks = relationship("Callback", back_populates="user")
-    arses = relationship("Ars", back_populates="user")
-    requests = relationship("Request", back_populates="user")
-    feedbacks = relationship("Feedback", back_populates="user")
+    auto = relationship("Auto", back_populates="user", uselist=False)
+    ars = relationship("Ars", back_populates="user", uselist=False)
 
 
 class Callback(DeclarativeBase):
     __tablename__ = "callback"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    data = Column(VARCHAR(64), nullable=False)
+    data = Column(VARCHAR(CALLBACK_DATA_LENGTH), nullable=False)
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
 
     user = relationship(User, back_populates="callbacks")
 
 
-class Spec(DeclarativeBase):
-    __tablename__ = "spec"
+class Auto(DeclarativeBase):
+    __tablename__ = "auto"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    title = Column(VARCHAR(32), nullable=False)
+    vendor_id = Column(BIGINT, ForeignKey(Vendor.id), nullable=False)
+    year = Column(VARCHAR(YEAR_LENGTH), nullable=False)
+    volume = Column(NUMERIC, nullable=False)
+    user_id = Column(BIGINT, ForeignKey(User.id), nullable=False, unique=True)
 
-    ars_specs = relationship("ArsSpec", back_populates="spec")
-    request_specs = relationship("RequestSpec", back_populates="spec")
+    vendor = relationship(Vendor, back_populates="autos")
+    user = relationship(User, back_populates="auto")
+    requests = relationship("Request", back_populates="auto")
+    feedbacks = relationship("Feedback", back_populates="auto")
 
 
 class Ars(DeclarativeBase):
     __tablename__ = "ars"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    title = Column(VARCHAR(TITLE_LENGTH), nullable=False)
-    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
+    title = Column(VARCHAR(ARS_TITLE_LENGTH))
+    description = Column(VARCHAR(DESCRIPTION_LENGTH))
     address = Column(VARCHAR(ADDRESS_LENGTH), nullable=False)
     latitude = Column(NUMERIC, nullable=False)
     longitude = Column(NUMERIC, nullable=False)
-    phone = Column(VARCHAR(10), nullable=False)
-    picture = Column(VARCHAR(128))
-    user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
+    picture = Column(VARCHAR(PICTURE_LENGTH))
+    user_id = Column(BIGINT, ForeignKey(User.id), unique=True)
 
-    user = relationship(User, back_populates="arses")
-    ars_specs = relationship("ArsSpec", back_populates="ars")
-    ars_vendors = relationship("ArsVendor", back_populates="ars")
+    user = relationship(User, back_populates="ars")
+    specs = relationship(Spec, secondary=ars_spec, back_populates="arses")
     offers = relationship("Offer", back_populates="ars")
     feedbacks = relationship("Feedback", back_populates="ars")
 
 
-class ArsSpec(DeclarativeBase):
-    __tablename__ = "ars_spec"
+class Registration(DeclarativeBase):
+    __tablename__ = "registration"
 
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
-    spec_id = Column(BIGINT, ForeignKey(Spec.id), primary_key=True)
-    cost_floor = Column(BIGINT, nullable=False)
-    cost_ceil = Column(BIGINT)
-
-    ars = relationship(Ars, back_populates="ars_specs")
-    spec = relationship(Spec, back_populates="ars_specs")
+    phone = Column(VARCHAR(PHONE_LENGTH), nullable=False, unique=True)
 
 
 class Request(DeclarativeBase):
     __tablename__ = "request"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    title = Column(VARCHAR(TITLE_LENGTH), nullable=False)
-    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
-    phone = Column(VARCHAR(10), nullable=False)
-    picture = Column(VARCHAR(128))
-    user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
+    spec_id = Column(BIGINT, ForeignKey(Spec.id), nullable=False)
+    auto_id = Column(BIGINT, ForeignKey(Auto.id), nullable=False)
 
-    user = relationship(User, back_populates="requests")
-    request_specs = relationship("RequestSpec", back_populates="request")
+    spec = relationship(Spec, back_populates="requests")
+    auto = relationship(Auto, back_populates="requests")
     offers = relationship("Offer", back_populates="request")
-
-
-class RequestSpec(DeclarativeBase):
-    __tablename__ = "request_spec"
-
-    request_id = Column(BIGINT, ForeignKey(Request.id), primary_key=True)
-    spec_id = Column(BIGINT, ForeignKey(Spec.id), primary_key=True)
-
-    request = relationship(Request, back_populates="request_specs")
-    spec = relationship(Spec, back_populates="request_specs")
 
 
 class Offer(DeclarativeBase):
@@ -108,42 +125,20 @@ class Offer(DeclarativeBase):
 
     request_id = Column(BIGINT, ForeignKey(Request.id), primary_key=True)
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
-    cost_floor = Column(BIGINT, nullable=False)
-    cost_ceil = Column(BIGINT)
-    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
-    winner = Column(BOOLEAN, nullable=False)
+    cost_floor = Column(INTEGER, nullable=False)
+    cost_ceil = Column(INTEGER)
+    description = Column(VARCHAR(DESCRIPTION_LENGTH))
 
-    ars = relationship(Ars, back_populates="offers")
     request = relationship(Request, back_populates="offers")
-
-
-class Vendor(DeclarativeBase):
-    __tablename__ = "vendor"
-
-    id = Column(BIGINT, autoincrement=True, primary_key=True)
-    title = Column(VARCHAR(32), nullable=False)
-
-    ars_vendors = relationship("ArsVendor", back_populates="vendor")
-
-
-class ArsVendor(DeclarativeBase):
-    __tablename__ = "ars_vendor"
-
-    ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
-    vendor_id = Column(BIGINT, ForeignKey(Vendor.id), primary_key=True)
-
-    ars = relationship(Ars, back_populates="ars_vendors")
-    vendor = relationship(Vendor, back_populates="ars_vendors")
+    ars = relationship(Ars, back_populates="offers")
 
 
 class Feedback(DeclarativeBase):
     __tablename__ = "feedback"
 
+    auto_id = Column(BIGINT, ForeignKey(Auto.id), primary_key=True)
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
-    user_id = Column(BIGINT, ForeignKey(User.id), primary_key=True)
     stars = Column(SMALLINT, nullable=False)
-    title = Column(VARCHAR(TITLE_LENGTH), nullable=False)
-    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
 
-    user = relationship(User, back_populates="feedbacks")
+    auto = relationship(Auto, back_populates="feedbacks")
     ars = relationship(Ars, back_populates="feedbacks")

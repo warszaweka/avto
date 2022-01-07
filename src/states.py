@@ -1,15 +1,68 @@
 from sqlalchemy.orm import Session
 
-from .models import (Ars, ArsSpec, ArsVendor, Feedback, Offer, Request,
-                     RequestSpec, Spec, Vendor)
-from .processors import (ProcessException, process_address_input,
-                         process_cost_input, process_description_input,
-                         process_stars_input, process_title_input)
+from .models import Registration, User
 
 engine = {
     "value": None,
 }
 
+START_ID = "start"
+
+
+def start_show(user_id, state_args):
+    return {
+        "text": "Старт",
+        "contact": True,
+    }
+
+
+def start_contact(user_id, state_args, handler_arg):
+    is_diller = False
+    with Session(engine["value"]) as session:
+        old_user = session.execute(
+            select(User).where(User.phone == handler_arg)).scalars().first()
+        if old_user is not None:
+            auto = old_user.auto
+            if auto is not None:
+                auto.user_id = user_id
+            else:
+                ars = old_user.ars
+                if ars is not None:
+                    ars.user_id = user_id
+                    is_diller = True
+            session.delete(old_user)
+        else:
+            registration = session.execute(
+                select(Registration).where(
+                    Registration.phone == handler_arg)).scalars().first()
+            if registration is not None:
+                registration.ars.user_id = user_id
+                session.delete(registration)
+                is_diller = True
+        session.get(User, user_id).phone = handler_arg
+        session.commit()
+    return DILLER_ID if is_diller else CLIENT_ID
+
+
+CLIENT_ID = "client"
+
+
+def client_show(user_id, state_args):
+    return {
+        "text": "Клиент",
+    }
+
+
+DILLER_ID = "diller"
+
+
+def diller_show(user_id, state_args):
+    return {
+        "text": "Диллер",
+    }
+
+
+"""
 MAIN_ID = "main"
 
 
@@ -3467,3 +3520,4 @@ def offer_delete_callback(user_id, state_args, state_id, handler_arg):
                 del state_args["request_return"]
             del state_args["request_id"]
             del state_args["ars_id"]
+"""
