@@ -99,6 +99,7 @@ class Ars(DeclarativeBase):
     specs = relationship(Spec, secondary=ars_spec, back_populates="arses")
     offers = relationship("Offer", back_populates="ars")
     feedbacks = relationship("Feedback", back_populates="ars")
+    registration = relationship("Registration", back_populates="ars", uselist=False)
 
 
 class Registration(DeclarativeBase):
@@ -106,6 +107,8 @@ class Registration(DeclarativeBase):
 
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
     phone = Column(VARCHAR(PHONE_LENGTH), nullable=False, unique=True)
+
+    ars = relationship(Ars, back_populates="registration")
 
 
 class Request(DeclarativeBase):
