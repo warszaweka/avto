@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import Auto, Registration, User, Vendor
+from .models import Auto, Registration, Request, Spec, User, Vendor
 
 engine = {
     "value": None,
@@ -215,18 +215,109 @@ CREATE_REQUEST_SPEC_ID = "create_request_spec"
 
 
 def create_request_spec_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        specs_list = [{
+            "id": spec.id,
+            "title": spec.title,
+        } for spec in session.query(Spec).all()]
     return {
-        "text": "Создать заявку",
+        "text":
+        "Выберите специализацию",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": spec_dict["title"],
+                "callback": {
+                    "state_id": REQUEST_ID,
+                    "handler_arg": str(spec_dict["id"]),
+                },
+            },
+        ] for spec_dict in specs_list],
     }
+
+
+def create_request_spec_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == REQUEST_ID:
+        with Session(engine["value"]) as session:
+            request = Request(
+                spec_id=int(handler_arg),
+                auto_id=session.execute(
+                    select(Auto).where(
+                        Auto.user_id == user_id)).scalars().first().id)
+            session.add(request)
+            request_id = request.id
+            session.commit()
+        state_args["id"] = request_id
 
 
 REQUESTS_ID = "requests"
 
 
 def requests_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        requests_list = [{
+            "id": request.id,
+            "spec": request.spec.title,
+        } for request in session.execute(
+            select(Request).where(Request.auto_id == session.execute(
+                select(Auto).where(Auto.user_id == user_id)).scalars().first().
+                                  id)).scalars().all()]
     return {
-        "text": "Заявки",
+        "text":
+        "Заявки",
+        "keyboard": [
+            [
+                {
+                    "text": "Кабинет",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": request_dict["title"],
+                "callback": {
+                    "state_id": REQUEST_ID,
+                    "handler_arg": str(request_dict["id"]),
+                },
+            },
+        ] for request_dict in requests_list],
     }
+
+
+def requests_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == REQUEST_ID:
+        state_args["id"] = int(handler_arg)
+
+
+REQUEST_ID = "request"
+
+
+def request_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        request_spec = session.execute(
+            select(Request).where(
+                Request.id == state_args["id"])).scalars().first().spec.title
+    return {
+        "text": "Заявка\n\n" + request_spec,
+        "keyboard": [
+            [
+                {
+                    "text": "Заявки",
+                    "callback": REQUESTS_ID,
+                },
+            ],
+        ],
+    }
+
+
+def request_callback(user_id, state_args, state_id, handler_arg):
+    del state_args["id"]
 
 
 DILLER_ID = "diller"
