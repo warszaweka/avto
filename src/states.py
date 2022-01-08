@@ -251,8 +251,8 @@ def create_request_spec_callback(user_id, state_args, state_id, handler_arg):
                     select(Auto).where(
                         Auto.user_id == user_id)).scalars().first().id)
             session.add(request)
-            request_id = request.id
             session.commit()
+            request_id = request.id
         state_args["id"] = request_id
 
 
