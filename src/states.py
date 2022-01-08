@@ -199,7 +199,8 @@ def change_auto_volume_text(user_id, state_args, handler_arg):
             session.add(
                 Auto(vendor_id=state_args["vendor_id"],
                      year=state_args["year"],
-                     volume=handler_arg))
+                     volume=handler_arg,
+                     user_id=user_id))
         else:
             auto.vendor_id = state_args["vendor_id"]
             auto.year = state_args["year"]
