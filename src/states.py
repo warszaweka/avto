@@ -516,8 +516,9 @@ def change_ars_specs_callback(user_id, state_args, state_id, handler_arg):
     else:
         del state_args["specs"]
         with Session(engine["value"]) as session:
-            specs = session.execute(select(Ars).where(
-                Ars.user_id == user_id)).scalars().first().specs
+            ars = session.execute(
+                select(Ars).where(Ars.user_id == user_id)).scalars().first()
+            specs = ars.specs
             specs.clear()
             for spec in specs_list:
                 specs.append(session.get(Spec, spec))
