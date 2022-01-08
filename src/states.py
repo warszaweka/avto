@@ -280,7 +280,7 @@ def requests_show(user_id, state_args):
             ],
         ] + [[
             {
-                "text": request_dict["title"],
+                "text": request_dict["spec"],
                 "callback": {
                     "state_id": REQUEST_ID,
                     "handler_arg": str(request_dict["id"]),
