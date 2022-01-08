@@ -4,7 +4,8 @@ from decimal import Decimal, InvalidOperation
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import Auto, Registration, Request, Spec, User, Vendor
+from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, Ars, Auto,
+                     Registration, Request, Spec, User, Vendor)
 
 engine = {
     "value": None,
@@ -55,18 +56,18 @@ CLIENT_ID = "client"
 
 
 def client_show(user_id, state_args):
-    vendor_title = None
+    vendor = None
     with Session(engine["value"]) as session:
         auto = session.execute(
             select(Auto).where(Auto.user_id == user_id)).scalars().first()
         if auto is not None:
-            vendor_title = auto.vendor.title
+            vendor = auto.vendor.title
             year = auto.year
             volume = auto.volume
     return {
         "text":
-        "Клиент" + ("\n\n" + vendor_title + "\n" + year + "\n" +
-                    str(volume) if vendor_title is not None else ""),
+        "Клиент\n" + ("\n" + vendor + "\n" + year + "\n" +
+                      str(volume) if vendor is not None else ""),
         "keyboard": [
             [
                 {
@@ -84,10 +85,10 @@ def client_show(user_id, state_args):
             [
                 {
                     "text": "Заявки",
-                    "callback": REQUESTS_ID,
+                    "callback": CLIENT_REQUESTS_ID,
                 },
             ],
-        ] if vendor_title is not None else []),
+        ] if vendor is not None else []),
     }
 
 
@@ -192,22 +193,24 @@ def change_auto_volume_text(user_id, state_args, handler_arg):
     if handler_arg < 0 or handler_arg > 10:
         state_args["status"] = "Выходит за рамки [0, 10]"
         return CHANGE_AUTO_VOLUME_ID
+    year = state_args["year"]
+    del state_args["year"]
+    vendor_id = state_args["vendor_id"]
+    del state_args["vendor_id"]
     with Session(engine["value"]) as session:
         auto = session.execute(
             select(Auto).where(Auto.user_id == user_id)).scalars().first()
         if auto is None:
             session.add(
-                Auto(vendor_id=state_args["vendor_id"],
-                     year=state_args["year"],
+                Auto(vendor_id=vendor_id,
+                     year=year,
                      volume=handler_arg,
                      user_id=user_id))
         else:
-            auto.vendor_id = state_args["vendor_id"]
-            auto.year = state_args["year"]
+            auto.vendor_id = vendor_id
+            auto.year = year
             auto.volume = handler_arg
         session.commit()
-    del state_args["year"]
-    del state_args["vendor_id"]
     return CLIENT_ID
 
 
@@ -234,7 +237,7 @@ def create_request_spec_show(user_id, state_args):
             {
                 "text": spec_dict["title"],
                 "callback": {
-                    "state_id": REQUEST_ID,
+                    "state_id": CLIENT_REQUEST_ID,
                     "handler_arg": str(spec_dict["id"]),
                 },
             },
@@ -243,7 +246,7 @@ def create_request_spec_show(user_id, state_args):
 
 
 def create_request_spec_callback(user_id, state_args, state_id, handler_arg):
-    if state_id == REQUEST_ID:
+    if state_id == CLIENT_REQUEST_ID:
         with Session(engine["value"]) as session:
             request = Request(
                 spec_id=int(handler_arg),
@@ -256,10 +259,10 @@ def create_request_spec_callback(user_id, state_args, state_id, handler_arg):
         state_args["id"] = request_id
 
 
-REQUESTS_ID = "requests"
+CLIENT_REQUESTS_ID = "client_requests"
 
 
-def requests_show(user_id, state_args):
+def client_requests_show(user_id, state_args):
     with Session(engine["value"]) as session:
         requests_list = [{
             "id": request.id,
@@ -282,7 +285,7 @@ def requests_show(user_id, state_args):
             {
                 "text": request_dict["spec"],
                 "callback": {
-                    "state_id": REQUEST_ID,
+                    "state_id": CLIENT_REQUEST_ID,
                     "handler_arg": str(request_dict["id"]),
                 },
             },
@@ -290,33 +293,34 @@ def requests_show(user_id, state_args):
     }
 
 
-def requests_callback(user_id, state_args, state_id, handler_arg):
-    if state_id == REQUEST_ID:
+def client_requests_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == CLIENT_REQUEST_ID:
         state_args["id"] = int(handler_arg)
 
 
-REQUEST_ID = "request"
+CLIENT_REQUEST_ID = "client_request"
 
 
-def request_show(user_id, state_args):
+def client_request_show(user_id, state_args):
+    request_id = state_args["id"]
     with Session(engine["value"]) as session:
-        request_spec = session.execute(
+        spec = session.execute(
             select(Request).where(
-                Request.id == state_args["id"])).scalars().first().spec.title
+                Request.id == request_id)).scalars().first().spec.title
     return {
-        "text": "Заявка\n\n" + request_spec,
+        "text": "Заявка\n\n" + spec,
         "keyboard": [
             [
                 {
                     "text": "Заявки",
-                    "callback": REQUESTS_ID,
+                    "callback": CLIENT_REQUESTS_ID,
                 },
             ],
         ],
     }
 
 
-def request_callback(user_id, state_args, state_id, handler_arg):
+def client_request_callback(user_id, state_args, state_id, handler_arg):
     del state_args["id"]
 
 
@@ -324,8 +328,236 @@ DILLER_ID = "diller"
 
 
 def diller_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        ars = session.execute(
+            select(Ars).where(Ars.user_id == user_id)).scalars().first()
+        title = ars.title
+        description = ars.description
+        picture = ars.picture
+        specs_list = [spec.title for spec in ars.specs]
+    render_message = {
+        "text":
+        "Диллер\n" + ("\n" + title if title is not None else "") +
+        ("\n" + description if description is not None else "") + "\n" +
+        " ".join(specs_list),
+        "keyboard": [
+            [
+                {
+                    "text": "Изменить название",
+                    "callback": CHANGE_ARS_TITLE_ID,
+                },
+            ],
+            [
+                {
+                    "text": "Изменить описание",
+                    "callback": CHANGE_ARS_DESCRIPTION_ID,
+                },
+            ],
+            [
+                {
+                    "text": "Изменить изображение",
+                    "callback": CHANGE_ARS_PICTURE_ID,
+                },
+            ],
+            [
+                {
+                    "text": "Изменить специализации",
+                    "callback": CHANGE_ARS_SPECS_ID,
+                },
+            ],
+            [
+                {
+                    "text": "Заявки",
+                    "callback": DILLER_REQUESTS_ID,
+                },
+            ],
+        ],
+    }
+    if picture is not None:
+        render_message["photo"] = picture
+    return render_message
+
+
+def diller_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == CHANGE_ARS_SPECS_ID:
+        with Session(engine["value"]) as session:
+            specs_list = [
+                spec.id for spec in session.execute(
+                    select(Ars).where(
+                        Ars.user_id == user_id)).scalars().first().specs
+            ]
+        state_args["specs"] = specs_list
+
+
+CHANGE_ARS_TITLE_ID = "change_ars_title"
+
+
+def change_ars_title_show(user_id, state_args):
     return {
-        "text": "Диллер",
+        "text": "Введите название",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": DILLER_ID,
+                },
+            ],
+        ],
+    }
+
+
+def change_ars_title_text(user_id, state_args, handler_arg):
+    if len(handler_arg) <= ARS_TITLE_LENGTH:
+        with Session(engine["value"]) as session:
+            session.execute(select(Ars).where(
+                Ars.user_id == user_id)).scalars().first().title = handler_arg
+            session.commit()
+        return DILLER_ID
+    state_args["status"] = "Слишком длинный"
+    return CHANGE_ARS_TITLE_ID
+
+
+CHANGE_ARS_DESCRIPTION_ID = "change_ars_description"
+
+
+def change_ars_description_show(user_id, state_args):
+    return {
+        "text": "Введите описание",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": DILLER_ID,
+                },
+            ],
+        ],
+    }
+
+
+def change_ars_description_text(user_id, state_args, handler_arg):
+    if len(handler_arg) <= DESCRIPTION_LENGTH:
+        with Session(engine["value"]) as session:
+            session.execute(select(Ars).where(Ars.user_id == user_id)).scalars(
+            ).first().description = handler_arg
+            session.commit()
+        return DILLER_ID
+    state_args["status"] = "Слишком длинный"
+    return CHANGE_ARS_DESCRIPTION_ID
+
+
+CHANGE_ARS_PICTURE_ID = "change_ars_picture"
+
+
+def change_ars_picture_show(user_id, state_args):
+    return {
+        "text": "Отправьте фотографию",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": DILLER_ID,
+                },
+            ],
+        ],
+    }
+
+
+def change_ars_picture_photo(user_id, state_args, handler_arg):
+    with Session(engine["value"]) as session:
+        session.execute(select(Ars).where(
+            Ars.user_id == user_id)).scalars().first().picture = handler_arg
+        session.commit()
+    return DILLER_ID
+
+
+CHANGE_ARS_SPECS_ID = "change_ars_specs"
+
+
+def change_ars_specs_show(user_id, state_args):
+    selected_list = state_args["specs"]
+    with Session(engine["value"]) as session:
+        specs_list = [{
+            "id": spec.id,
+            "title": spec.title,
+        } for spec in session.query(Spec).all()]
+        selected_list = [
+            session.get(Spec, spec).title for spec in selected_list
+        ]
+    return {
+        "text":
+        "Выберите специализацию\n\n" + " ".join(selected_list),
+        "keyboard": [
+            [
+                {
+                    "text": "Кабинет",
+                    "callback": DILLER_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": spec_dict["title"],
+                "callback": {
+                    "state_id": CHANGE_ARS_SPECS_ID,
+                    "handler_arg": str(spec_dict["id"]),
+                },
+            },
+        ] for spec_dict in specs_list],
+    }
+
+
+def change_ars_specs_callback(user_id, state_args, state_id, handler_arg):
+    specs_list = state_args["specs"]
+    if state_id == CHANGE_ARS_SPECS_ID:
+        spec_id = int(handler_arg)
+        if spec_id in specs_list:
+            specs_list.remove(spec_id)
+        else:
+            specs_list.append(spec_id)
+    else:
+        del state_args["specs"]
+        with Session(engine["value"]) as session:
+            specs = session.execute(select(Ars).where(
+                Ars.user_id == user_id)).scalars().first().specs
+            specs.clear()
+            for spec in specs_list:
+                specs.append(session.get(Spec, spec))
+            session.commit()
+
+
+DILLER_REQUESTS_ID = "diller_requests"
+
+
+def diller_requests_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        specs_list = [
+            spec.id for spec in session.execute(
+                select(Ars).where(
+                    Ars.user_id == user_id)).scalars().first().specs
+        ]
+        requests_list = [{
+            "id": request.id,
+            "spec": request.spec.title,
+        } for request in session.query(Request).all()
+                         if request.spec.id in specs_list]
+    return {
+        "text":
+        "Заявки",
+        "keyboard": [
+            [
+                {
+                    "text": "Кабинет",
+                    "callback": DILLER_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": request_dict["spec"],
+                "callback": {
+                    "state_id": DILLER_ID,
+                    "handler_arg": str(request_dict["id"]),
+                },
+            },
+        ] for request_dict in requests_list],
     }
 
 
