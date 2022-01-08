@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import Auto, Registration, User
+from .models import Auto, Registration, User, Vendor
 
 engine = {
     "value": None,
