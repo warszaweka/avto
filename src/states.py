@@ -1,7 +1,10 @@
+from datetime import date
+from decimal import Decimal, InvalidOperation
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import Registration, User
+from .models import Auto, Registration, User
 
 engine = {
     "value": None,
@@ -52,18 +55,176 @@ CLIENT_ID = "client"
 
 
 def client_show(user_id, state_args):
+    vendor_title = None
+    with Session(engine["value"]) as session:
+        auto = session.execute(
+            select(Auto).where(Auto.user_id == user_id)).scalars().first()
+        if auto is not None:
+            vendor_title = auto.vendor.title
+            year = auto.year
+            volume = auto.volume
     return {
-        "text": "Клиент",
+        "text":
+        "Клиент" + ("\n\n" + vendor_title + "\n" + year + "\n" +
+                    str(volume) if vendor_title is not None else ""),
         "keyboard": [
-            [{
-                "text": "СТО",
-                "callback": ARSES_ID
-            }],
-            [{
-                "text": "Аукцион заявок",
-                "callback": REQUESTS_ID
-            }],
+            [
+                {
+                    "text": "Автопарк",
+                    "callback": CHANGE_AUTO_VENDOR_ID,
+                },
+            ],
+        ] + ([
+            [
+                {
+                    "text": "Создать заявку",
+                    "callback": CREATE_REQUEST_SPEC_ID,
+                },
+            ],
+            [
+                {
+                    "text": "Заявки",
+                    "callback": REQUESTS_ID,
+                },
+            ],
+        ] if vendor_title is not None else []),
+    }
+
+
+CHANGE_AUTO_VENDOR_ID = "change_auto_vendor"
+
+
+def change_auto_vendor_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        vendors_list = [{
+            "id": vendor.id,
+            "title": vendor.title,
+        } for vendor in session.query(Vendor).all()]
+    return {
+        "text":
+        "Выберите производителя",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": vendor_dict["title"],
+                "callback": {
+                    "state_id": CHANGE_AUTO_YEAR_ID,
+                    "handler_arg": str(vendor_dict["id"]),
+                },
+            },
+        ] for vendor_dict in vendors_list],
+    }
+
+
+def change_auto_vendor_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == CHANGE_AUTO_YEAR_ID:
+        state_args["vendor_id"] = int(handler_arg)
+
+
+CHANGE_AUTO_YEAR_ID = "change_auto_year"
+
+
+def change_auto_year_show(user_id, state_args):
+    return {
+        "text": "Введите год",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": CLIENT_ID,
+                },
+            ],
         ],
+    }
+
+
+def change_auto_year_callback(user_id, state_args, state_id, handler_arg):
+    del state_args["vendor_id"]
+
+
+def change_auto_year_text(user_id, state_args, handler_arg):
+    try:
+        handler_arg = int(handler_arg)
+    except ValueError:
+        state_args["status"] = "Не число"
+        return CHANGE_AUTO_YEAR_ID
+    if handler_arg < 1900 or handler_arg > date.today().year:
+        state_args["status"] = "Выходит за рамки [1900, this]"
+        return CHANGE_AUTO_YEAR_ID
+    state_args["year"] = str(handler_arg)
+    return CHANGE_AUTO_VOLUME_ID
+
+
+CHANGE_AUTO_VOLUME_ID = "change_auto_volume"
+
+
+def change_auto_volume_show(user_id, state_args):
+    return {
+        "text": "Введите объем",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ],
+    }
+
+
+def change_auto_volume_callback(user_id, state_args, state_id, handler_arg):
+    del state_args["year"]
+    del state_args["vendor_id"]
+
+
+def change_auto_volume_text(user_id, state_args, handler_arg):
+    try:
+        handler_arg = Decimal(handler_arg)
+    except InvalidOperation:
+        state_args["status"] = "Не число"
+        return CHANGE_AUTO_VOLUME_ID
+    if handler_arg < 0 or handler_arg > 10:
+        state_args["status"] = "Выходит за рамки [0, 10]"
+        return CHANGE_AUTO_VOLUME_ID
+    with Session(engine["value"]) as session:
+        auto = session.execute(
+            select(Auto).where(Auto.user_id == user_id)).scalars().first()
+        if auto is None:
+            session.add(
+                Auto(vendor_id=state_args["vendor_id"],
+                     year=state_args["year"],
+                     volume=handler_arg))
+        else:
+            auto.vendor_id = state_args["vendor_id"]
+            auto.year = state_args["year"]
+            auto.volume = handler_arg
+        session.commit()
+    del state_args["year"]
+    del state_args["vendor_id"]
+    return CLIENT_ID
+
+
+CREATE_REQUEST_SPEC_ID = "create_request_spec"
+
+
+def create_request_spec_show(user_id, state_args):
+    return {
+        "text": "Создать заявку",
+    }
+
+
+REQUESTS_ID = "requests"
+
+
+def requests_show(user_id, state_args):
+    return {
+        "text": "Заявки",
     }
 
 
