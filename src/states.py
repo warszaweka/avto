@@ -458,10 +458,12 @@ CLIENT_OFFER_ID = "client_offer"
 
 
 def client_offer_show(user_id, state_args):
-    request_id = state_args["request_id"]
-    ars_id = state_args["ars_id"]
+    offer_id = {
+        "request_id": state_args["request_id"],
+        "ars_id": state_args["ars_id"],
+    }
     with Session(engine["value"]) as session:
-        offer = session.get(Offer, request_id=request_id, ars_id=ars_id)
+        offer = session.get(Offer, offer_id)
         cost_floor = offer.cost_floor
         cost_ceil = offer.cost_ceil
         description = offer.description
@@ -695,18 +697,20 @@ DILLER_REQUESTS_ID = "diller_requests"
 
 
 def diller_requests_show(user_id, state_args):
+    requests_list = []
     with Session(engine["value"]) as session:
         ars = session.execute(
             select(Ars).where(Ars.user_id == user_id)).scalars().first()
         ars_id = ars.id
         spec_ids_list = [spec.id for spec in ars.specs]
-        requests_list = []
         for request in session.query(Request).all():
             spec = request.spec
             if spec.id in spec_ids_list:
                 request_id = request.id
-                if session.get(Offer, request_id=request_id,
-                               ars_id=ars_id) is None:
+                if session.get(Offer, {
+                        "request_id": request_id,
+                        "ars_id": ars_id,
+                }) is None:
                     requests_list.append({
                         "id": request_id,
                         "spec_title": spec.title,
