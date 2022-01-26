@@ -1,5 +1,5 @@
 from sqlalchemy import ForeignKey, Table
-from sqlalchemy.dialects.postgresql import (BIGINT, ENUM, INTEGER, JSONB,
+from sqlalchemy.dialects.postgresql import (BIGINT, ENUM, INTEGER, JSONB, BOOLEAN,
                                             NUMERIC, SMALLINT, VARCHAR)
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import Column
@@ -33,7 +33,7 @@ class Spec(DeclarativeBase):
     __tablename__ = "spec"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    title = Column(VARCHAR(SPEC_TITLE_LENGTH), nullable=False)
+    title = Column(VARCHAR(SPEC_TITLE_LENGTH), nullable=False, unique=True)
 
     requests = relationship("Request", back_populates="spec")
     arses = relationship("Ars", secondary=ars_spec, back_populates="specs")
@@ -43,7 +43,7 @@ class Vendor(DeclarativeBase):
     __tablename__ = "vendor"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    title = Column(VARCHAR(VENDOR_TITLE_LENGTH), nullable=False)
+    title = Column(VARCHAR(VENDOR_TITLE_LENGTH), nullable=False, unique=True)
 
     autos = relationship("Auto", back_populates="vendor")
 
@@ -95,8 +95,8 @@ class Ars(DeclarativeBase):
     __tablename__ = "ars"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
-    title = Column(VARCHAR(ARS_TITLE_LENGTH))
-    description = Column(VARCHAR(DESCRIPTION_LENGTH))
+    title = Column(VARCHAR(ARS_TITLE_LENGTH), nullable=False, default="")
+    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False, default="")
     address = Column(VARCHAR(ADDRESS_LENGTH), nullable=False)
     latitude = Column(NUMERIC, nullable=False)
     longitude = Column(NUMERIC, nullable=False)
@@ -140,7 +140,8 @@ class Offer(DeclarativeBase):
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
     cost_floor = Column(INTEGER, nullable=False)
     cost_ceil = Column(INTEGER)
-    description = Column(VARCHAR(DESCRIPTION_LENGTH))
+    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
+    winner = Column(BOOLEAN, nullbale=False, default=False)
 
     request = relationship(Request, back_populates="offers")
     ars = relationship(Ars, back_populates="offers")

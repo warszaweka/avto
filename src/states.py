@@ -103,6 +103,12 @@ def client_show(user_id, state_args):
                     "callback": CLIENT_REQUESTS_ID,
                 },
             ],
+            [
+                {
+                    "text": "Победы",
+                    "callback": CLIENT_WINS_ID,
+                },
+            ],
         ] if auto is not None else []),
     }
 
@@ -372,13 +378,18 @@ CLIENT_REQUESTS_ID = "client_requests"
 
 
 def client_requests_show(user_id, state_args):
+    requests_list = []
     with Session(engine["value"]) as session:
-        requests_list = [{
-            "id": request.id,
-            "spec_title": request.spec.title,
-        } for request in session.execute(
-            select(Auto).where(
-                Auto.user_id == user_id)).scalars().first().requests]
+        for request in session.execute(
+                select(Auto).where(
+                    Auto.user_id == user_id)).scalars().first().requests:
+            for offer in request.offers:
+                if offer.winner:
+                    requests_list.append({
+                        "id": request.id,
+                        "spec_title": request.spec.title,
+                    })
+                    break
     return {
         "text":
         "Заявки",
@@ -479,14 +490,119 @@ def client_offer_show(user_id, state_args):
                     "callback": CLIENT_REQUEST_ID,
                 },
             ],
+            [
+                {
+                    "text": "Выбрать",
+                    "callback": CLIENT_WIN_ID,
+                },
+            ],
         ],
     }
 
 
 def client_offer_callback(user_id, state_args, state_id, handler_arg):
-    state_args["id"] = state_args["request_id"]
+    request_id = state_args["request_id"]
     del state_args["request_id"]
+    if state_id == CLIENT_WIN_ID:
+        offer_id = {
+            "request_id": request_id,
+            "ars_id": state_args["ars_id"],
+        }
+        with Session(engine["value"]) as session:
+            session.get(Offer, offer_id).winner = True
+            session.commit()
     del state_args["ars_id"]
+    state_args["id"] = request_id
+
+
+CLIENT_WINS_ID = "client_wins"
+
+
+def client_wins_show(user_id, state_args):
+    requests_list = []
+    with Session(engine["value"]) as session:
+        for request in session.execute(
+                select(Auto).where(
+                    Auto.user_id == user_id)).scalars().first().requests:
+            is_win = False
+            for offer in request.offers:
+                if offer.winner:
+                    is_win = True
+                    break
+            if is_win:
+                continue
+            requests_list.append({
+                "id": request.id,
+                "spec_title": request.spec.title,
+            })
+    return {
+        "text":
+        "Победы",
+        "keyboard": [
+            [
+                {
+                    "text": "Кабинет",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": request_dict["spec_title"],
+                "callback": {
+                    "state_id": CLIENT_WIN_ID,
+                    "handler_arg": str(request_dict["id"]),
+                },
+            },
+        ] for request_dict in requests_list],
+    }
+
+
+def client_wins_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == CLIENT_WIN_ID:
+        state_args["id"] = int(handler_arg)
+
+
+CLIENT_WIN_ID = "client_win"
+
+
+def client_win_show(user_id, state_args):
+    request_id = state_args["id"]
+    with Session(engine["value"]) as session:
+        request = session.get(Request, request_id)
+        spec_title = request.spec.title
+        for offer in request.offers:
+            if offer.winner:
+                cost_floor = offer.cost_floor
+                cost_ceil = offer.cost_ceil
+                description = offer.description
+                ars = offer.ars
+                ars_title = ars.title
+                ars_description = ars.description
+                ars_address = ars.address
+                ars_picture = ars.picture
+                break
+    render_message = {
+        "text":
+        "Победа\n\n" + spec_title + "\n" + str(cost_floor) +
+        ("-" + str(cost_ceil) if cost_ceil is not None else "") + "\n" +
+        description + "\n" + ars_title + "\n" + ars_description + "\n" +
+        ars_address,
+        "keyboard": [
+            [
+                {
+                    "text": "Победы",
+                    "callback": CLIENT_WINS_ID,
+                },
+            ],
+        ],
+    }
+    if ars_picture is not None:
+        render_message["photo"] = ars_picture
+    return render_message
+
+
+def client_win_callback(user_id, state_args, state_id, handler_arg):
+    del state_args["id"]
 
 
 DILLER_ID = "diller"
@@ -502,10 +618,8 @@ def diller_show(user_id, state_args):
         spec_titles_list = [spec.title for spec in ars.specs]
     render_message = {
         "text":
-        "Диллер\n" + ("\n" + title if title is not None else "") +
-        ("\n" + description if description is not None else "") +
-        ("\n" +
-         " ".join(spec_titles_list) if len(spec_titles_list) != 0 else ""),
+        "Диллер\n\n" + title + "\n" + description + "\n" +
+        " ".join(spec_titles_list),
         "keyboard": [
             [
                 {
@@ -535,6 +649,12 @@ def diller_show(user_id, state_args):
                 {
                     "text": "Заявки",
                     "callback": DILLER_REQUESTS_ID,
+                },
+            ],
+            [
+                {
+                    "text": "Победы",
+                    "callback": DILLER_WINNERS_ID,
                 },
             ],
         ],
@@ -651,9 +771,7 @@ def change_ars_specs_show(user_id, state_args):
         ]
     return {
         "text":
-        "Выберите специализацию\n" +
-        ("\n" +
-         " ".join(spec_titles_list) if len(spec_titles_list) != 0 else ""),
+        "Выберите специализацию\n\n" + " ".join(spec_titles_list),
         "keyboard": [
             [
                 {
@@ -706,15 +824,17 @@ def diller_requests_show(user_id, state_args):
         for request in session.query(Request).all():
             spec = request.spec
             if spec.id in spec_ids_list:
-                request_id = request.id
-                if session.get(Offer, {
-                        "request_id": request_id,
-                        "ars_id": ars_id,
-                }) is None:
-                    requests_list.append({
-                        "id": request_id,
-                        "spec_title": spec.title,
-                    })
+                skip = False
+                for offer in request.offers:
+                    if offer.winner or offer.ars_id == ars_id:
+                        skip = True
+                        break
+                if skip:
+                    continue
+                requests_list.append({
+                    "id": request.id,
+                    "spec_title": spec.title,
+                })
     return {
         "text":
         "Заявки",
@@ -842,3 +962,84 @@ def create_offer_description_text(user_id, state_args, handler_arg):
                   description=handler_arg))
         session.commit()
     return DILLER_REQUESTS_ID
+
+
+DILLER_WINNERS_ID = "diller_winners"
+
+
+def diller_winners_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        offers_list = [{
+            "request_id": offer.request_id,
+            "spec_title": offer.request.spec.title,
+        } for offer in session.execute(
+            select(Ars).where(Ars.user_id == user_id)).scalars().first().offers
+                       ]
+    return {
+        "text":
+        "Победители",
+        "keyboard": [
+            [
+                {
+                    "text": "Кабинет",
+                    "callback": DILLER_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": offer_dict["spec_title"],
+                "callback": {
+                    "state_id": DILLER_WINNER_ID,
+                    "handler_arg": str(offer_dict["request_id"]),
+                },
+            },
+        ] for offer_dict in offers_list],
+    }
+
+
+def diller_winners_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == DILLER_WINNER_ID:
+        state_args["request_id"] = int(handler_arg)
+
+
+DILLER_WINNER_ID = "diller_winner"
+
+
+def diller_winner_show(user_id, state_args):
+    request_id = state_args["request_id"]
+    with Session(engine["value"]) as session:
+        offer = session.get(
+            Offer, {
+                "request_id":
+                request_id,
+                "ars_id":
+                session.execute(select(Ars).where(
+                    Ars.user_id == user_id)).scalars().first().id,
+            })
+        cost_floor = offer.cost_floor
+        cost_ceil = offer.cost_ceil
+        description = offer.description
+        request = offer.request
+        spec_title = request.spec.title
+        auto = request.auto
+        auto_year = auto.year
+        auto_fuel = auto.fuel
+    return {
+        "text":
+        "Победитель\n\n" + str(cost_floor) +
+        ("-" + str(cost_ceil) if cost_ceil is not None else "") + "\n" +
+        description + "\n" + spec_title + "\n" + auto_year + "\n" +
+        FUEL_TEXT_MAP[auto_fuel],
+        "keyboard": [
+            [
+                {
+                    "text": "Победители",
+                    "callback": DILLER_WINNERS_ID,
+                },
+            ],
+        ],
+    }
+
+
+def diller_winner_callback(user_id, state_args, state_id, handler_arg):
+    del state_args["request_id"]
