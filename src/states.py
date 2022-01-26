@@ -383,13 +383,16 @@ def client_requests_show(user_id, state_args):
         for request in session.execute(
                 select(Auto).where(
                     Auto.user_id == user_id)).scalars().first().requests:
+            is_not_win = True
             for offer in request.offers:
                 if offer.winner:
-                    requests_list.append({
-                        "id": request.id,
-                        "spec_title": request.spec.title,
-                    })
+                    is_not_win = False
                     break
+            if is_not_win:
+                requests_list.append({
+                    "id": request.id,
+                    "spec_title": request.spec.title,
+                })
     return {
         "text":
         "Заявки",
@@ -530,11 +533,10 @@ def client_wins_show(user_id, state_args):
                     is_win = True
                     break
             if is_win:
-                continue
-            requests_list.append({
-                "id": request.id,
-                "spec_title": request.spec.title,
-            })
+                requests_list.append({
+                    "id": request.id,
+                    "spec_title": request.spec.title,
+                })
     return {
         "text":
         "Победы",
@@ -824,17 +826,16 @@ def diller_requests_show(user_id, state_args):
         for request in session.query(Request).all():
             spec = request.spec
             if spec.id in spec_ids_list:
-                skip = False
+                not_skip = True
                 for offer in request.offers:
                     if offer.winner or offer.ars_id == ars_id:
-                        skip = True
+                        not_skip = False
                         break
-                if skip:
-                    continue
-                requests_list.append({
-                    "id": request.id,
-                    "spec_title": spec.title,
-                })
+                if not_skip:
+                    requests_list.append({
+                        "id": request.id,
+                        "spec_title": spec.title,
+                    })
     return {
         "text":
         "Заявки",
