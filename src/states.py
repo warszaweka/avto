@@ -340,7 +340,8 @@ def create_request_spec_show(user_id, state_args):
         } for spec in session.query(Spec).all()]
     return {
         "text":
-        "Выберите специализацию",
+        "Укажите какие услуги СТО вам необходимы и двигаемся далее. Если есть сомнения, в следующе"\
+        "м окне вы сможете описать техническую проблему.",
         "keyboard": [
             [
                 {
@@ -352,7 +353,7 @@ def create_request_spec_show(user_id, state_args):
             {
                 "text": spec_dict["title"],
                 "callback": {
-                    "state_id": CLIENT_REQUEST_ID,
+                    "state_id": CREATE_REQUEST_DESCRIPTION_ID,
                     "handler_arg": str(spec_dict["id"]),
                 },
             },
@@ -361,17 +362,50 @@ def create_request_spec_show(user_id, state_args):
 
 
 def create_request_spec_callback(user_id, state_args, state_id, handler_arg):
-    if state_id == CLIENT_REQUEST_ID:
-        with Session(engine["value"]) as session:
-            request = Request(
-                spec_id=int(handler_arg),
-                auto_id=session.execute(
-                    select(Auto).where(
-                        Auto.user_id == user_id)).scalars().first().id)
-            session.add(request)
-            session.commit()
-            request_id = request.id
-        state_args["id"] = request_id
+    if state_id == CREATE_REQUEST_DESCRIPTION_ID:
+        state_args["spec_id"] = int(handler_arg)
+
+
+CREATE_REQUEST_DESCRIPTION_ID = "create_request_description"
+
+
+def create_request_description_show(user_id, state_args):
+    return {
+        "text": "Введите описание",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ],
+    }
+
+
+def create_request_description_callback(user_id, state_args, state_id,
+                                        handler_arg):
+    del state_args["spec_id"]
+
+
+def create_request_description_text(user_id, state_args, handler_arg):
+    if len(handler_arg) > DESCRIPTION_LENGTH:
+        state_args["status"] = "Слишком длинный"
+        return CREATE_REQUEST_DESCRIPTION_ID
+    spec_id = state_args["spec_id"]
+    del state_args["spec_id"]
+    with Session(engine["value"]) as session:
+        request = Request(
+            spec_id=spec_id,
+            description=handler_arg,
+            auto_id=session.execute(
+                select(Auto).where(
+                    Auto.user_id == user_id)).scalars().first().id)
+        session.add(request)
+        session.commit()
+        request_id = request.id
+    state_args["id"] = request_id
+    return CLIENT_REQUEST_ID
 
 
 CLIENT_REQUESTS_ID = "client_requests"
