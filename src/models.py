@@ -143,7 +143,7 @@ class Offer(DeclarativeBase):
     cost_floor = Column(INTEGER, nullable=False)
     cost_ceil = Column(INTEGER)
     description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
-    winner = Column(BOOLEAN, nullbale=False, default=False)
+    winner = Column(BOOLEAN, nullable=False, default=False)
 
     request = relationship(Request, back_populates="offers")
     ars = relationship(Ars, back_populates="offers")
