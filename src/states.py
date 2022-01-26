@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+from fuzzywuzzy import process
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,18 @@ from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, FUEL_TEXT_MAP, Ars,
 engine = {
     "value": None,
 }
+
+DEFAULT_VENDOR_TITLES_LIST = [
+    "Volkswagen",
+    "Renault",
+    "Skoda",
+    "Toyota",
+    "Ford",
+    "Opel",
+    "Hyundai",
+    "Mersedes-Benz",
+    "Daewoo",
+]
 
 START_ID = "start"
 
@@ -98,14 +111,34 @@ CHANGE_AUTO_VENDOR_ID = "change_auto_vendor"
 
 
 def change_auto_vendor_show(user_id, state_args):
+    is_search = False
+    if "search" in state_args:
+        search = state_args["search"]
+        is_search = True
     with Session(engine["value"]) as session:
+        if is_search:
+            vendors_dict = {
+                vendor.id: vendor.title
+                for vendor in session.query(Vendor).all()
+            }
+        else:
+            vendors_list = [{
+                "id":
+                session.execute(select(Vendor).where(
+                    Vendor.title == title)).scalars().first().id,
+                "title":
+                title,
+            } for title in DEFAULT_VENDOR_TITLES_LIST]
+    if is_search:
         vendors_list = [{
-            "id": vendor.id,
-            "title": vendor.title,
-        } for vendor in session.query(Vendor).all()]
+            "id": search_result[2],
+            "title": search_result[0],
+        } for search_result in process.extract(search, vendors_dict, limit=9)]
     return {
         "text":
-        "Выберите производителя",
+        "Выберите марку авто или введите вручную",
+        "photo":
+        "AgACAgIAAxkBAAIDXGHxSaL6ORLMthA-QvusMDhD0A8OAALbuDEbZMaIS_H7E-LwbqZGAQADAgADcwADIwQ",
         "keyboard": [
             [
                 {
@@ -126,8 +159,18 @@ def change_auto_vendor_show(user_id, state_args):
 
 
 def change_auto_vendor_callback(user_id, state_args, state_id, handler_arg):
+    if "search" in state_args:
+        del state_args["search"]
     if state_id == CHANGE_AUTO_YEAR_ID:
         state_args["vendor_id"] = int(handler_arg)
+
+
+def change_auto_vendor_text(user_id, state_args, handler_arg):
+    if len(handler_arg) != 0:
+        state_args["search"] = handler_arg
+    elif "search" in state_args:
+        del state_args["search"]
+    return CHANGE_AUTO_VENDOR_ID
 
 
 CHANGE_AUTO_YEAR_ID = "change_auto_year"
