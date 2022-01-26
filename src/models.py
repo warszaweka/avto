@@ -1,6 +1,6 @@
 from sqlalchemy import ForeignKey, Table
-from sqlalchemy.dialects.postgresql import (BIGINT, INTEGER, JSONB, NUMERIC,
-                                            SMALLINT, VARCHAR)
+from sqlalchemy.dialects.postgresql import (BIGINT, ENUM, INTEGER, JSONB,
+                                            NUMERIC, SMALLINT, VARCHAR)
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import Column
 
@@ -73,6 +73,9 @@ class Auto(DeclarativeBase):
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     vendor_id = Column(BIGINT, ForeignKey(Vendor.id), nullable=False)
     year = Column(VARCHAR(YEAR_LENGTH), nullable=False)
+    fuel = Column("fuel",
+                  ENUM("gasoline", "diesel", "electric", name="fuel"),
+                  nullable=False)
     volume = Column(NUMERIC, nullable=False)
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False, unique=True)
 

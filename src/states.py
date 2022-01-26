@@ -11,6 +11,12 @@ engine = {
     "value": None,
 }
 
+fuel_text_map = {
+    "gasoline": "Бензин",
+    "diesel": "Дизель",
+    "electric": "Електро",
+}
+
 START_ID = "start"
 
 
@@ -63,11 +69,13 @@ def client_show(user_id, state_args):
         if auto is not None:
             vendor_title = auto.vendor.title
             year = auto.year
+            fuel = auto.fuel
             volume = auto.volume
     return {
         "text":
-        "Клиент\n" + ("\n" + vendor_title + "\n" + year + "\n" +
-                      str(volume) if auto is not None else ""),
+        "Клиент\n" +
+        ("\n" + vendor_title + "\n" + year + "\n" + fuel_text_map[fuel] +
+         "\n" + str(volume) if auto is not None else ""),
         "keyboard": [
             [
                 {
@@ -159,7 +167,41 @@ def change_auto_year_text(user_id, state_args, handler_arg):
         state_args["status"] = "Выходит за рамки [1900, this]"
         return CHANGE_AUTO_YEAR_ID
     state_args["year"] = str(handler_arg)
-    return CHANGE_AUTO_VOLUME_ID
+    return CHANGE_AUTO_FUEL_ID
+
+
+CHANGE_AUTO_FUEL_ID = "change_auto_fuel"
+
+
+def change_auto_fuel_show(user_id, state_args):
+    return {
+        "text":
+        "Выберите топливо",
+        "keyboard": [
+            [
+                {
+                    "text": "Отменить",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ] + [[
+            {
+                "text": fuel_text_item[1],
+                "callback": {
+                    "state_id": CHANGE_AUTO_VOLUME_ID,
+                    "handler_arg": fuel_text_item[0],
+                },
+            },
+        ] for fuel_text_item in fuel_text_map.items()],
+    }
+
+
+def change_auto_fuel_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == CHANGE_AUTO_VOLUME_ID:
+        state_args["fuel"] = handler_arg
+        return
+    del state_args["year"]
+    del state_args["vendor_id"]
 
 
 CHANGE_AUTO_VOLUME_ID = "change_auto_volume"
@@ -180,6 +222,7 @@ def change_auto_volume_show(user_id, state_args):
 
 
 def change_auto_volume_callback(user_id, state_args, state_id, handler_arg):
+    del state_args["fuel"]
     del state_args["year"]
     del state_args["vendor_id"]
 
@@ -193,6 +236,8 @@ def change_auto_volume_text(user_id, state_args, handler_arg):
     if handler_arg < 0 or handler_arg > 10:
         state_args["status"] = "Выходит за рамки [0, 10]"
         return CHANGE_AUTO_VOLUME_ID
+    fuel = state_args["fuel"]
+    del state_args["fuel"]
     year = state_args["year"]
     del state_args["year"]
     vendor_id = state_args["vendor_id"]
@@ -204,11 +249,13 @@ def change_auto_volume_text(user_id, state_args, handler_arg):
             session.add(
                 Auto(vendor_id=vendor_id,
                      year=year,
+                     fuel=fuel,
                      volume=handler_arg,
                      user_id=user_id))
         else:
             auto.vendor_id = vendor_id
             auto.year = year
+            auto.fuel = fuel
             auto.volume = handler_arg
         session.commit()
     return CLIENT_ID

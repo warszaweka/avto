@@ -11,6 +11,8 @@ gunicorn = "*"
 gevent = "*"
 psycogreen = "*"
 requests = "*"
+fuzzywuzzy = "*"
+python-levenshtein = "*"
 
 [dev-packages]
 pynvim = "*"
