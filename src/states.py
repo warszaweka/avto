@@ -4,17 +4,11 @@ from decimal import Decimal, InvalidOperation
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, Ars, Auto,
-                     Registration, Request, Spec, User, Vendor)
+from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, FUEL_TEXT_MAP, Ars,
+                     Auto, Registration, Request, Spec, User, Vendor)
 
 engine = {
     "value": None,
-}
-
-fuel_text_map = {
-    "gasoline": "Бензин",
-    "diesel": "Дизель",
-    "electric": "Електро",
 }
 
 START_ID = "start"
@@ -74,7 +68,7 @@ def client_show(user_id, state_args):
     return {
         "text":
         "Клиент\n" +
-        ("\n" + vendor_title + "\n" + year + "\n" + fuel_text_map[fuel] +
+        ("\n" + vendor_title + "\n" + year + "\n" + FUEL_TEXT_MAP[fuel] +
          "\n" + str(volume) if auto is not None else ""),
         "keyboard": [
             [
@@ -140,8 +134,25 @@ CHANGE_AUTO_YEAR_ID = "change_auto_year"
 
 
 def change_auto_year_show(user_id, state_args):
+    today_year = date.today().year
+    render_years = []
+    for i in range(3):
+        render_years_row = []
+        for j in range(3):
+            str_year = str(today_year - 2 - i * 3 - j)
+            render_years_row.append({
+                "text": str_year,
+                "callback": {
+                    "state_id": CHANGE_AUTO_FUEL_ID,
+                    "handler_arg": str_year,
+                },
+            })
+        render_years.append(render_years_row)
     return {
-        "text": "Введите год",
+        "text":
+        "Выберите год выпуска Вашего авто или введите вручную",
+        "photo":
+        "AgACAgIAAxkBAAIDVWHxQV_vOdKeipTI5FNStBBJRbGMAAKyuDEbZMaIS3fMyQzlmN9BAQADAgADcwADIwQ",
         "keyboard": [
             [
                 {
@@ -149,11 +160,14 @@ def change_auto_year_show(user_id, state_args):
                     "callback": CLIENT_ID,
                 },
             ],
-        ],
+        ] + render_years,
     }
 
 
 def change_auto_year_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == CHANGE_AUTO_FUEL_ID:
+        state_args["year"] = handler_arg
+        return
     del state_args["vendor_id"]
 
 
@@ -176,7 +190,9 @@ CHANGE_AUTO_FUEL_ID = "change_auto_fuel"
 def change_auto_fuel_show(user_id, state_args):
     return {
         "text":
-        "Выберите топливо",
+        "Выберите вид топлива авто",
+        "photo":
+        "AgACAgIAAxkBAAIDVGHxPdZzlJPa7wITyeubx5_F-_OcAAKouDEbZMaISxJEH1CrzvwLAQADAgADcwADIwQ",
         "keyboard": [
             [
                 {
@@ -192,7 +208,7 @@ def change_auto_fuel_show(user_id, state_args):
                     "handler_arg": fuel_text_item[0],
                 },
             },
-        ] for fuel_text_item in fuel_text_map.items()],
+        ] for fuel_text_item in FUEL_TEXT_MAP.items()],
     }
 
 
@@ -209,7 +225,10 @@ CHANGE_AUTO_VOLUME_ID = "change_auto_volume"
 
 def change_auto_volume_show(user_id, state_args):
     return {
-        "text": "Введите объем",
+        "text":
+        "Введите объем двигателя Вашего авто в литрах, через точку. Пример:  1.2",
+        "photo":
+        "AgACAgIAAxkBAAIDVmHxQZoAAb8BlKhqC-GWxFt-h1ZrpwACtbgxG2TGiEtDJrZQZfnmNQEAAwIAA3MAAyME",
         "keyboard": [
             [
                 {

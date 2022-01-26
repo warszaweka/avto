@@ -17,6 +17,12 @@ PICTURE_LENGTH = 128
 DESCRIPTION_LENGTH = 2048
 ADDRESS_LENGTH = 64
 
+FUEL_TEXT_MAP = {
+    "gasoline": "Бензин",
+    "diesel": "Дизель",
+    "electric": "Електро",
+}
+
 ars_spec = Table(
     "ars_spec", DeclarativeBase.metadata,
     Column("ars_id", BIGINT, ForeignKey("ars.id"), primary_key=True),
@@ -74,7 +80,7 @@ class Auto(DeclarativeBase):
     vendor_id = Column(BIGINT, ForeignKey(Vendor.id), nullable=False)
     year = Column(VARCHAR(YEAR_LENGTH), nullable=False)
     fuel = Column("fuel",
-                  ENUM("gasoline", "diesel", "electric", name="fuel"),
+                  ENUM(*FUEL_TEXT_MAP.keys(), name="fuel"),
                   nullable=False)
     volume = Column(NUMERIC, nullable=False)
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False, unique=True)
