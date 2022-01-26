@@ -655,7 +655,7 @@ def diller_show(user_id, state_args):
             ],
             [
                 {
-                    "text": "Победы",
+                    "text": "Победители",
                     "callback": DILLER_WINNERS_ID,
                 },
             ],
@@ -975,7 +975,7 @@ def diller_winners_show(user_id, state_args):
             "spec_title": offer.request.spec.title,
         } for offer in session.execute(
             select(Ars).where(Ars.user_id == user_id)).scalars().first().offers
-                       ]
+                       if offer.winner]
     return {
         "text":
         "Победители",
