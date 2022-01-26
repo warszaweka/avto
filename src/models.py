@@ -1,6 +1,6 @@
 from sqlalchemy import ForeignKey, Table
-from sqlalchemy.dialects.postgresql import (BIGINT, ENUM, INTEGER, JSONB, BOOLEAN,
-                                            NUMERIC, SMALLINT, VARCHAR)
+from sqlalchemy.dialects.postgresql import (BIGINT, BOOLEAN, ENUM, INTEGER,
+                                            JSONB, NUMERIC, SMALLINT, VARCHAR)
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import Column
 
@@ -96,7 +96,9 @@ class Ars(DeclarativeBase):
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     title = Column(VARCHAR(ARS_TITLE_LENGTH), nullable=False, default="")
-    description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False, default="")
+    description = Column(VARCHAR(DESCRIPTION_LENGTH),
+                         nullable=False,
+                         default="")
     address = Column(VARCHAR(ADDRESS_LENGTH), nullable=False)
     latitude = Column(NUMERIC, nullable=False)
     longitude = Column(NUMERIC, nullable=False)
