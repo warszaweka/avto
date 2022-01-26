@@ -98,7 +98,9 @@ class Ars(DeclarativeBase):
     specs = relationship(Spec, secondary=ars_spec, back_populates="arses")
     offers = relationship("Offer", back_populates="ars")
     feedbacks = relationship("Feedback", back_populates="ars")
-    registration = relationship("Registration", back_populates="ars", uselist=False)
+    registration = relationship("Registration",
+                                back_populates="ars",
+                                uselist=False)
 
 
 class Registration(DeclarativeBase):
