@@ -884,7 +884,7 @@ def diller_requests_show(user_id, state_args):
             {
                 "text": request_dict["spec_title"],
                 "callback": {
-                    "state_id": CREATE_OFFER_COST_ID,
+                    "state_id": DILLER_REQUEST_ID,
                     "handler_arg": str(request_dict["id"]),
                 },
             },
@@ -893,8 +893,43 @@ def diller_requests_show(user_id, state_args):
 
 
 def diller_requests_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == DILLER_REQUEST_ID:
+        state_args["id"] = int(handler_arg)
+
+
+DILLER_REQUEST_ID = "diller_request"
+
+
+def diller_request_show(user_id, state_args):
+    request_id = state_args["id"]
+    with Session(engine["value"]) as session:
+        request = session.get(Request, request_id)
+        spec_title = request.spec.title
+        description = request.description
+    return {
+        "text":
+        "Заявка\n\n" + spec_title + "\n" + description,
+        "keyboard": [
+            [
+                {
+                    "text": "Заявки",
+                    "callback": DILLER_REQUESTS_ID,
+                },
+            ],
+            [
+                {
+                    "text": "Создать оффер",
+                    "callback": CREATE_OFFER_COST_ID,
+                },
+            ],
+        ],
+    }
+
+
+def diller_request_callback(user_id, state_args, state_id, handler_arg):
     if state_id == CREATE_OFFER_COST_ID:
-        state_args["request_id"] = int(handler_arg)
+        state_args["request_id"] = state_args["id"]
+    del state_args["id"]
 
 
 CREATE_OFFER_COST_ID = "create_offer_cost"
@@ -907,7 +942,7 @@ def create_offer_cost_show(user_id, state_args):
             [
                 {
                     "text": "Отменить",
-                    "callback": DILLER_REQUESTS_ID,
+                    "callback": DILLER_REQUEST_ID,
                 },
             ],
         ],
@@ -915,6 +950,7 @@ def create_offer_cost_show(user_id, state_args):
 
 
 def create_offer_cost_callback(user_id, state_args, state_id, handler_arg):
+    state_args["id"] = state_args["request_id"]
     del state_args["request_id"]
 
 
@@ -959,7 +995,7 @@ def create_offer_description_show(user_id, state_args):
             [
                 {
                     "text": "Отменить",
-                    "callback": DILLER_REQUESTS_ID,
+                    "callback": DILLER_REQUEST_ID,
                 },
             ],
         ],
@@ -971,6 +1007,7 @@ def create_offer_description_callback(user_id, state_args, state_id,
     del state_args["cost_floor"]
     if "cost_ceil" in state_args:
         del state_args["cost_ceil"]
+    state_args["id"] = state_args["request_id"]
     del state_args["request_id"]
 
 
