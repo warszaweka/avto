@@ -69,20 +69,17 @@ CLIENT_ID = "client"
 
 
 def client_show(user_id, state_args):
-    vendor_title = None
+    has_auto = False
     with Session(engine["value"]) as session:
-        auto = session.execute(
-            select(Auto).where(Auto.user_id == user_id)).scalars().first()
-        if auto is not None:
-            vendor_title = auto.vendor.title
-            year = auto.year
-            fuel = auto.fuel
-            volume = auto.volume
+        if session.execute(select(Auto).where(
+                Auto.user_id == user_id)).scalars().first() is not None:
+            has_auto = True
     return {
         "text":
-        "Клиент\n" +
-        ("\n" + vendor_title + "\n" + year + "\n" + FUEL_TEXT_MAP[fuel] +
-         "\n" + str(volume) if auto is not None else ""),
+        "Главное меню навигации Автопилота."\
+        "\nВвод новых заявок и контроль уже поданных происходит отсюда."\
+        "\nЕсли нужна помощь, обратитесь в поддержку."\
+        "\nХорошего вам дня!",
         "keyboard": [
             [
                 {
@@ -93,13 +90,13 @@ def client_show(user_id, state_args):
         ] + ([
             [
                 {
-                    "text": "Создать заявку",
+                    "text": "Новая заявка",
                     "callback": CREATE_REQUEST_SPEC_ID,
                 },
             ],
             [
                 {
-                    "text": "Заявки",
+                    "text": "Заявки в работе",
                     "callback": CLIENT_REQUESTS_ID,
                 },
             ],
@@ -109,7 +106,14 @@ def client_show(user_id, state_args):
                     "callback": CLIENT_WINS_ID,
                 },
             ],
-        ] if auto is not None else []),
+        ] if has_auto else []) + [
+            [
+                {
+                    "text": "Поддержка",
+                    "url": "tg://user?id=547862853",
+                },
+            ],
+        ],
     }
 
 
@@ -371,7 +375,9 @@ CREATE_REQUEST_DESCRIPTION_ID = "create_request_description"
 
 def create_request_description_show(user_id, state_args):
     return {
-        "text": "Введите описание",
+        "text": "Если вы хотите добавить описание или комментарий к ремонту, то это можно сделать"\
+        " сейчас. Это необязательное для заполнения поле, но любая дополнительная информация помо"\
+        "жет нашим специалистам в решении проблемы.",
         "keyboard": [
             [
                 {
@@ -417,23 +423,24 @@ def client_requests_show(user_id, state_args):
         for request in session.execute(
                 select(Auto).where(
                     Auto.user_id == user_id)).scalars().first().requests:
-            is_not_win = True
+            is_win = False
             for offer in request.offers:
                 if offer.winner:
-                    is_not_win = False
+                    is_win = True
                     break
-            if is_not_win:
+            if not is_win:
                 requests_list.append({
                     "id": request.id,
                     "spec_title": request.spec.title,
                 })
     return {
         "text":
-        "Заявки",
+        "Список поданных вами заявок. Здесь вы можете видеть их статус и перейти к конкретной зая"\
+        "вке для ее подтверждения или отмены",
         "keyboard": [
             [
                 {
-                    "text": "Кабинет",
+                    "text": "Главное меню",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -860,12 +867,12 @@ def diller_requests_show(user_id, state_args):
         for request in session.query(Request).all():
             spec = request.spec
             if spec.id in spec_ids_list:
-                not_skip = True
+                skip = False
                 for offer in request.offers:
                     if offer.winner or offer.ars_id == ars_id:
-                        not_skip = False
+                        skip = True
                         break
-                if not_skip:
+                if not skip:
                     requests_list.append({
                         "id": request.id,
                         "spec_title": spec.title,

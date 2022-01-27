@@ -23,14 +23,14 @@ from src.models import Callback, DeclarativeBase, User
 from src.states import START_ID
 from src.states import engine as states_engine
 
+WP_ID = "AgACAgIAAxkBAAIDNGHfEPbUj7t3qprC-KO7lt1JjgXGAAIBuTEbLv34SoRDr_9uF707AQADAgADcwADIwQ"
+
 engine = create_engine(
     sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1))
 DeclarativeBase.metadata.create_all(engine)
 states_engine["value"] = engine
 
 tg_token = getenv("TG_TOKEN")
-
-wp_id = getenv("WP_ID")
 
 tg_semaphores = {}
 dict_semaphore = BoundedSemaphore()
@@ -122,7 +122,7 @@ def tg_handler(data):
 
                 tg_message_id = tg_request("sendPhoto", {
                     "chat_id": tg_id,
-                    "photo": wp_id,
+                    "photo": WP_ID,
                 })["message_id"]
 
                 if user_id is not None:
@@ -192,7 +192,7 @@ def tg_handler(data):
                         "photo",
                         "media":
                         render_message["photo"]
-                        if "photo" in render_message else wp_id,
+                        if "photo" in render_message else WP_ID,
                         "caption":
                         (status + "\n\n" if status is not None else "") +
                         (render_message["text"]
@@ -204,16 +204,22 @@ def tg_handler(data):
                     for render_row in render_message["keyboard"]:
                         rendered_row = []
                         for render_button in render_row:
-                            render_callback = render_button["callback"]
-                            callback_data = (render_callback if isinstance(
-                                render_callback,
-                                str) else render_callback["state_id"] + ":" +
-                                             render_callback["handler_arg"])
-                            callbacks_list.append(callback_data)
-                            rendered_row.append({
+                            rendered_button = {
                                 "text": render_button["text"],
-                                "callback_data": callback_data,
-                            })
+                            }
+                            if "callback" in render_button:
+                                render_callback = render_button["callback"]
+                                callback_data = (
+                                    render_callback if isinstance(
+                                        render_callback,
+                                        str) else render_callback["state_id"] +
+                                    ":" + render_callback["handler_arg"])
+                                callbacks_list.append(callback_data)
+                                rendered_button[
+                                    "callback_data"] = callback_data
+                            else:
+                                rendered_button["url"] = render_button["url"]
+                            rendered_row.append(rendered_button)
                         rendered_inline_keyboard.append(rendered_row)
                     rendered_message["reply_markup"] = {
                         "inline_keyboard": rendered_inline_keyboard,
