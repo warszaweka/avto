@@ -83,33 +83,32 @@ def client_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Автопарк",
+                    "text": "🚗 Автопарк",
                     "callback": CHANGE_AUTO_VENDOR_ID,
                 },
-            ],
+            ] + ([
+                {
+                    "text": "📝 Новая заявка",
+                    "callback": CREATE_REQUEST_SPEC_ID,
+                },
+            ] if has_auto else []),
         ] + ([
             [
                 {
-                    "text": "Новая заявка",
-                    "callback": CREATE_REQUEST_SPEC_ID,
-                },
-            ],
-            [
-                {
-                    "text": "Заявки в работе",
+                    "text": "📄 Заявки в работе",
                     "callback": CLIENT_REQUESTS_ID,
                 },
             ],
             [
                 {
-                    "text": "Победы",
+                    "text": "📑 Победы",
                     "callback": CLIENT_WINS_ID,
                 },
             ],
         ] if has_auto else []) + [
             [
                 {
-                    "text": "Поддержка",
+                    "text": "📞 Поддержка",
                     "url": "tg://user?id=547862853",
                 },
             ],
