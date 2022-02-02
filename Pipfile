@@ -14,5 +14,7 @@ requests = "*"
 fuzzywuzzy = "*"
 python-levenshtein = "*"
 
+[dev-packages]
+
 [requires]
 python_version = "3.10"
