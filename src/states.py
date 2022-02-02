@@ -69,11 +69,11 @@ CLIENT_ID = "client"
 
 
 def client_show(user_id, state_args):
-    vendor = None
+    vendor_title = None
     with Session(engine["value"]) as session:
         auto = session.execute(select(Auto).where(Auto.user_id == user_id)).scalars().first()
         if auto is not None:
-            vendor = auto.vendor
+            vendor_title = auto.vendor.title
             year = auto.year
             fuel = auto.fuel
             volume = auto.volume
@@ -82,7 +82,7 @@ def client_show(user_id, state_args):
         "Главное меню навигации Автопилота."
         "\nВвод новых заявок и контроль уже поданных происходит отсюда."
         + ("\nВаше авто:"
-            f"\n{vendor}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}" if vendor is not None else ""),
+            f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}" if vendor_title is not None else ""),
         "keyboard": [
             [
                 {
@@ -94,7 +94,7 @@ def client_show(user_id, state_args):
                     "text": "📝 Новая заявка",
                     "callback": CREATE_REQUEST_SPEC_ID,
                 },
-            ] if vendor is not None else []),
+            ] if vendor_title is not None else []),
         ] + ([
             [
                 {
@@ -106,7 +106,7 @@ def client_show(user_id, state_args):
                     "callback": CLIENT_WINS_ID,
                 },
             ],
-        ] if vendor is not None else []) + [
+        ] if vendor_title is not None else []) + [
             [
                 {
                     "text": "📞 Поддержка",
@@ -448,7 +448,7 @@ def client_requests_show(user_id, state_args):
             ],
         ] + [[
             {
-                "text": f"{i}. {request_dict['spec_title']}",
+                "text": f"{i + 1}. {request_dict['spec_title']}",
                 "callback": {
                     "state_id": CLIENT_REQUEST_ID,
                     "handler_arg": str(request_dict["id"]),
