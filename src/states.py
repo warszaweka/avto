@@ -32,7 +32,7 @@ def start_show(user_id, state_args):
         "text": "Старт",
         "contact": {
             "text": "Номер",
-            "button": "Номер",
+            "button": "📱 Номер",
         },
     }
 
@@ -69,21 +69,24 @@ CLIENT_ID = "client"
 
 
 def client_show(user_id, state_args):
-    has_auto = False
+    vendor = None
     with Session(engine["value"]) as session:
-        if session.execute(select(Auto).where(
-                Auto.user_id == user_id)).scalars().first() is not None:
-            has_auto = True
+        auto = session.execute(select(Auto).where(Auto.user_id == user_id)).scalars().first()
+        if auto is not None:
+            vendor = auto.vendor
+            year = auto.year
+            fuel = auto.fuel
+            volume = auto.volume
     return {
         "text":
-        "Главное меню навигации Автопилота."\
-        "\nВвод новых заявок и контроль уже поданных происходит отсюда."\
-        "\nЕсли нужна помощь, обратитесь в поддержку."\
-        "\nХорошего вам дня!",
+        "Главное меню навигации Автопилота."
+        "\nВвод новых заявок и контроль уже поданных происходит отсюда."
+        ("\nВаше авто:"
+            f"\n{vendor}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}" if vendor is not None else ""),
         "keyboard": [
             [
                 {
-                    "text": "🚗 Автопарк",
+                    "text": "🚗 Изменить авто",
                     "callback": CHANGE_AUTO_VENDOR_ID,
                 },
             ] + ([
@@ -91,7 +94,7 @@ def client_show(user_id, state_args):
                     "text": "📝 Новая заявка",
                     "callback": CREATE_REQUEST_SPEC_ID,
                 },
-            ] if has_auto else []),
+            ] if vendor is not None else []),
         ] + ([
             [
                 {
@@ -99,11 +102,11 @@ def client_show(user_id, state_args):
                     "callback": CLIENT_REQUESTS_ID,
                 },
                 {
-                    "text": "📒 Победы",
+                    "text": "📒 Акцепты",
                     "callback": CLIENT_WINS_ID,
                 },
             ],
-        ] if has_auto else []) + [
+        ] if vendor is not None else []) + [
             [
                 {
                     "text": "📞 Поддержка",
@@ -149,7 +152,7 @@ def change_auto_vendor_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -186,7 +189,7 @@ CHANGE_AUTO_YEAR_ID = "change_auto_year"
 def change_auto_year_show(user_id, state_args):
     today_year = date.today().year
     render_years = []
-    for i in range(3):
+    for i in range(6):
         render_years_row = []
         for j in range(3):
             str_year = str(today_year - 2 - i * 3 - j)
@@ -206,7 +209,7 @@ def change_auto_year_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -246,7 +249,7 @@ def change_auto_fuel_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -282,7 +285,7 @@ def change_auto_volume_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -346,7 +349,7 @@ def create_request_spec_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -378,7 +381,7 @@ def create_request_description_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -432,24 +435,26 @@ def client_requests_show(user_id, state_args):
                 })
     return {
         "text":
-        "Список поданных вами заявок. Здесь вы можете видеть их статус и перейти к конкретной зая"\
-        "вке для ее подтверждения или отмены",
+        "Заявки на рассмотрении. Все просто."
+        "\nПо каждой заявке Вы получите несколько предложений от СТО. Все предложения действительны 15 минут, поэтому желательно уложиться с выбором в этот промежуток времени."
+        "\nЛучшее из предложений Вы акцептуете и в предложенное время направляетесь на СТО для ремонта."
+        "\nДетально вы можете видеть статус и перейти к конкретной заявке для ее подтверждения.",
         "keyboard": [
             [
                 {
-                    "text": "Главное меню",
+                    "text": "🔙 Назад",
                     "callback": CLIENT_ID,
                 },
             ],
         ] + [[
             {
-                "text": request_dict["spec_title"],
+                "text": f"{i}. {request_dict['spec_title']}",
                 "callback": {
                     "state_id": CLIENT_REQUEST_ID,
                     "handler_arg": str(request_dict["id"]),
                 },
             },
-        ] for request_dict in requests_list],
+        ] for i, request_dict in enumerate(requests_list)],
     }
 
 
@@ -491,7 +496,7 @@ def client_request_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Заявки",
+                    "text": "🔙 Назад",
                     "callback": CLIENT_REQUESTS_ID,
                 },
             ],
@@ -527,13 +532,11 @@ def client_offer_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Заявка",
+                    "text": "🔙 Назад",
                     "callback": CLIENT_REQUEST_ID,
                 },
-            ],
-            [
                 {
-                    "text": "Выбрать",
+                    "text": "✓ Выбрать",
                     "callback": CLIENT_WIN_ID,
                 },
             ],
@@ -577,11 +580,11 @@ def client_wins_show(user_id, state_args):
                 })
     return {
         "text":
-        "Победы",
+        "Акцепты",
         "keyboard": [
             [
                 {
-                    "text": "Кабинет",
+                    "text": "🔙 Назад",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -623,14 +626,14 @@ def client_win_show(user_id, state_args):
                 break
     render_message = {
         "text":
-        "Победа\n\n" + spec_title + "\n" + str(cost_floor) +
+        "Акцепт\n\n" + spec_title + "\n" + str(cost_floor) +
         ("-" + str(cost_ceil) if cost_ceil is not None else "") + "\n" +
         description + "\n" + ars_title + "\n" + ars_description + "\n" +
         ars_address,
         "keyboard": [
             [
                 {
-                    "text": "Победы",
+                    "text": "🔙 Назад",
                     "callback": CLIENT_WINS_ID,
                 },
             ],
