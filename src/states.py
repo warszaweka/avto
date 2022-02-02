@@ -81,7 +81,7 @@ def client_show(user_id, state_args):
         "text":
         "Главное меню навигации Автопилота."
         "\nВвод новых заявок и контроль уже поданных происходит отсюда."
-        ("\nВаше авто:"
+        + ("\nВаше авто:"
             f"\n{vendor}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}" if vendor is not None else ""),
         "keyboard": [
             [
