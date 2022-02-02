@@ -98,10 +98,8 @@ def client_show(user_id, state_args):
                     "text": "📄 Заявки в работе",
                     "callback": CLIENT_REQUESTS_ID,
                 },
-            ],
-            [
                 {
-                    "text": "📑 Победы",
+                    "text": "📒 Победы",
                     "callback": CLIENT_WINS_ID,
                 },
             ],
