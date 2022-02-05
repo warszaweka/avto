@@ -418,21 +418,13 @@ CLIENT_REQUESTS_ID = "client_requests"
 
 
 def client_requests_show(user_id, state_args):
-    requests_list = []
     with Session(engine["value"]) as session:
-        for request in session.execute(
+        requests_list = [{
+            "id": request.id,
+            "spec_title": request.spec.title,
+            } for request in session.execute(
                 select(Auto).where(
-                    Auto.user_id == user_id)).scalars().first().requests:
-            is_win = False
-            for offer in request.offers:
-                if offer.winner:
-                    is_win = True
-                    break
-            if not is_win:
-                requests_list.append({
-                    "id": request.id,
-                    "spec_title": request.spec.title,
-                })
+                    Auto.user_id == user_id)).scalars().first().requests if request.active]
     return {
         "text":
         "Заявки на рассмотрении. Все просто."
@@ -507,15 +499,27 @@ def client_request_show(user_id, state_args):
                     "text": "🔙 Назад",
                     "callback": CLIENT_REQUESTS_ID,
                 },
+                {
+                    "text": "🗑 Удалить заявку",
+                    "callback": {
+                        "state_id": CLIENT_REQUEST_ID,
+                        "handler_arg": "delete",
+                    },
+                },
             ],
         ] + render_offers,
     }
 
 
 def client_request_callback(user_id, state_args, state_id, handler_arg):
+    request_id = state_args["id"]
     if state_id == CLIENT_OFFER_ID:
-        state_args["request_id"] = state_args["id"]
+        state_args["request_id"] = request_id
         state_args["ars_id"] = int(handler_arg)
+    elif handler_arg == "delete":
+        with Session(engine["value"]) as session:
+            session.get(Request, request_id).active = False
+            session.commit()
     del state_args["id"]
 
 
@@ -561,7 +565,9 @@ def client_offer_callback(user_id, state_args, state_id, handler_arg):
             "ars_id": state_args["ars_id"],
         }
         with Session(engine["value"]) as session:
-            session.get(Offer, offer_id).winner = True
+            offer = sesion.get(Offer, offer_id)
+            offer.request.active = False
+            offer.winner = True
             session.commit()
     del state_args["ars_id"]
     state_args["id"] = request_id
@@ -576,6 +582,8 @@ def client_wins_show(user_id, state_args):
         for request in session.execute(
                 select(Auto).where(
                     Auto.user_id == user_id)).scalars().first().requests:
+            if request.active:
+                continue
             is_win = False
             for offer in request.offers:
                 if offer.winner:

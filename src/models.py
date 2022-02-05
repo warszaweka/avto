@@ -130,6 +130,7 @@ class Request(DeclarativeBase):
     spec_id = Column(BIGINT, ForeignKey(Spec.id), nullable=False)
     description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
     auto_id = Column(BIGINT, ForeignKey(Auto.id), nullable=False)
+    active = Column(BOOLEAN, nullable=False, default=True)
 
     spec = relationship(Spec, back_populates="requests")
     auto = relationship(Auto, back_populates="requests")
