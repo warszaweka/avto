@@ -502,7 +502,7 @@ def client_request_show(user_id, state_args):
                 {
                     "text": "🗑 Удалить заявку",
                     "callback": {
-                        "state_id": CLIENT_REQUEST_ID,
+                        "state_id": CLIENT_REQUESTS_ID,
                         "handler_arg": "delete",
                     },
                 },
