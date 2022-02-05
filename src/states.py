@@ -470,12 +470,18 @@ def client_request_show(user_id, state_args):
     request_id = state_args["id"]
     with Session(engine["value"]) as session:
         request = session.get(Request, request_id)
+        description = request.description
         spec_title = request.spec.title
         offers_list = [{
             "ars_id": offer.ars_id,
             "cost_floor": offer.cost_floor,
             "cost_ceil": offer.cost_ceil,
         } for offer in request.offers]
+        auto = request.auto
+        vendor_title = auto.vendor.title
+        year = auto.year
+        fuel = auto.fuel
+        volume = auto.volume
     render_offers = []
     for offer_dict in offers_list:
         cost_ceil = offer_dict["cost_ceil"]
@@ -492,7 +498,9 @@ def client_request_show(user_id, state_args):
         ])
     return {
         "text":
-        "Заявка\n\n" + spec_title,
+        f"Ваш автомобиль: {vendor_title}, {str(year)}, {str(volume)}, {FUEL_TEXT_MAP[fuel]}."
+        f"\nОтправлена заявка на следующие услуги ремонта: {spec_title}."
+        f"\nКомментарий: {description}.",
         "keyboard": [
             [
                 {
