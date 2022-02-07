@@ -226,9 +226,7 @@ def tg_handler(data):
                     }
 
                 with Session(engine) as session:
-                    for callback in session.execute(
-                            select(Callback).where(
-                                Callback.user_id == user_id)).scalars().all():
+                    for callback in session.get(User, user_id).callbacks:
                         session.delete(callback)
                     for callback_data in callbacks_list:
                         session.add(

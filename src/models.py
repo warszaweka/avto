@@ -58,7 +58,7 @@ class User(DeclarativeBase):
     state_args = Column(JSONB, nullable=False)
     phone = Column(VARCHAR(PHONE_LENGTH), unique=True)
 
-    callbacks = relationship("Callback", back_populates="user")
+    callbacks = relationship("Callback", back_populates="user", passive_deletes=True)
     auto = relationship("Auto", back_populates="user", uselist=False)
     ars = relationship("Ars", back_populates="user", uselist=False)
 
@@ -68,7 +68,7 @@ class Callback(DeclarativeBase):
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     data = Column(VARCHAR(CALLBACK_DATA_LENGTH), nullable=False)
-    user_id = Column(BIGINT, ForeignKey(User.id), nullable=False)
+    user_id = Column(BIGINT, ForeignKey(User.id, ondelete="CASCADE"), nullable=False)
 
     user = relationship(User, back_populates="callbacks")
 
