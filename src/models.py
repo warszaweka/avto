@@ -1,6 +1,6 @@
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.dialects.postgresql import (BIGINT, BOOLEAN, ENUM, INTEGER,
-                                            JSONB, NUMERIC, SMALLINT, VARCHAR)
+                                            JSONB, NUMERIC, VARCHAR)
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import Column
 
@@ -58,7 +58,9 @@ class User(DeclarativeBase):
     state_args = Column(JSONB, nullable=False)
     phone = Column(VARCHAR(PHONE_LENGTH), unique=True)
 
-    callbacks = relationship("Callback", back_populates="user", passive_deletes=True)
+    callbacks = relationship("Callback",
+                             back_populates="user",
+                             passive_deletes=True)
     auto = relationship("Auto", back_populates="user", uselist=False)
     ars = relationship("Ars", back_populates="user", uselist=False)
 
@@ -68,7 +70,9 @@ class Callback(DeclarativeBase):
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     data = Column(VARCHAR(CALLBACK_DATA_LENGTH), nullable=False)
-    user_id = Column(BIGINT, ForeignKey(User.id, ondelete="CASCADE"), nullable=False)
+    user_id = Column(BIGINT,
+                     ForeignKey(User.id, ondelete="CASCADE"),
+                     nullable=False)
 
     user = relationship(User, back_populates="callbacks")
 
@@ -88,7 +92,6 @@ class Auto(DeclarativeBase):
     vendor = relationship(Vendor, back_populates="autos")
     user = relationship(User, back_populates="auto")
     requests = relationship("Request", back_populates="auto")
-    feedbacks = relationship("Feedback", back_populates="auto")
 
 
 class Ars(DeclarativeBase):
@@ -108,7 +111,6 @@ class Ars(DeclarativeBase):
     user = relationship(User, back_populates="ars")
     specs = relationship(Spec, secondary=ars_spec, back_populates="arses")
     offers = relationship("Offer", back_populates="ars")
-    feedbacks = relationship("Feedback", back_populates="ars")
     registration = relationship("Registration",
                                 back_populates="ars",
                                 uselist=False)
@@ -149,14 +151,3 @@ class Offer(DeclarativeBase):
 
     request = relationship(Request, back_populates="offers")
     ars = relationship(Ars, back_populates="offers")
-
-
-class Feedback(DeclarativeBase):
-    __tablename__ = "feedback"
-
-    auto_id = Column(BIGINT, ForeignKey(Auto.id), primary_key=True)
-    ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
-    stars = Column(SMALLINT, nullable=False)
-
-    auto = relationship(Auto, back_populates="feedbacks")
-    ars = relationship(Ars, back_populates="feedbacks")

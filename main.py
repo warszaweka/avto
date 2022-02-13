@@ -9,6 +9,7 @@ patch_psycopg()
 from os import getenv
 from re import sub
 from sys import stderr
+from typing import Dict
 
 from flask import Flask, request
 from gevent import spawn
@@ -23,34 +24,31 @@ from src.models import Callback, DeclarativeBase, User
 from src.states import START_ID
 from src.states import engine as states_engine
 
-WP_ID = "AgACAgIAAxkBAAIDNGHfEPbUj7t3qprC-KO7lt1JjgXGAAIBuTEbLv34SoRDr_9uF707AQADAgADcwADIwQ"
+WP_ID = "AgACAgIAAxkBAAIDNGHfEPbUj7t3qprC-KO7lt1JjgXGAAIBuTEbLv34SoRDr_9uF" + \
+    "707AQADAgADcwADIwQ"
 
 engine = create_engine(
-    sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL"), 1))
+    sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL", ""), 1))
 DeclarativeBase.metadata.create_all(engine)
 states_engine["value"] = engine
 
 tg_token = getenv("TG_TOKEN")
 
-tg_semaphores = {}
+tg_semaphores: Dict = {}
 dict_semaphore = BoundedSemaphore()
 
 
 def tg_request(method, data):
-    response = post(
-        url="https://api.telegram.org/bot" + tg_token + "/" + method,
-        json=data,
-    ).json()
-    print("REQUEST: " + method + " " + str(data) + "\nRESPONSE: " +
-          str(response),
+    response = post(url=f"https://api.telegram.org/bot{tg_token}/{method}",
+                    json=data).json()
+    print(f"REQUEST/RESPONSE: {method} {str(data)} {str(response)}",
           file=stderr)
     if response["ok"]:
         return response["result"]
-    return response["description"]
 
 
 def tg_handler(data):
-    print("UPDATE: " + str(data), file=stderr)
+    print(f"UPDATE: {str(data)}", file=stderr)
 
     is_message = False
     update_type = None
@@ -112,13 +110,10 @@ def tg_handler(data):
 
             if update_type == "start":
                 if user_id is not None:
-                    tg_request(
-                        "deleteMessage",
-                        {
-                            "chat_id": tg_id,
-                            "message_id": tg_message_id,
-                        },
-                    )
+                    tg_request("deleteMessage", {
+                        "chat_id": tg_id,
+                        "message_id": tg_message_id,
+                    })
 
                 tg_message_id = tg_request("sendPhoto", {
                     "chat_id": tg_id,
@@ -147,7 +142,7 @@ def tg_handler(data):
             else:
                 automaton = False
                 automaton_handler = getattr(states,
-                                            state_id + "_" + update_type, None)
+                                            f"{state_id}_{update_type}", None)
                 if update_type in ["text", "photo", "contact"]:
                     if automaton_handler is not None:
                         automaton_return = automaton_handler(
@@ -182,7 +177,7 @@ def tg_handler(data):
                 callbacks_list = []
 
                 render_message = getattr(states,
-                                         state_id + "_show")(user_id,
+                                         f"{state_id}_show")(user_id,
                                                              state_args)
                 rendered_message = {
                     "chat_id": tg_id,
@@ -194,7 +189,7 @@ def tg_handler(data):
                         render_message["photo"]
                         if "photo" in render_message else WP_ID,
                         "caption":
-                        (status + "\n\n" if status is not None else "") +
+                        (f"{status}\n\n" if status is not None else "") +
                         (render_message["text"]
                          if "text" in render_message else ""),
                     },
@@ -209,11 +204,10 @@ def tg_handler(data):
                             }
                             if "callback" in render_button:
                                 render_callback = render_button["callback"]
-                                callback_data = (
-                                    render_callback if isinstance(
-                                        render_callback,
-                                        str) else render_callback["state_id"] +
-                                    ":" + render_callback["handler_arg"])
+                                callback_data = render_callback if isinstance(
+                                    render_callback, str) else render_callback[
+                                        "state_id"] + ":" + render_callback[
+                                            "handler_arg"]
                                 callbacks_list.append(callback_data)
                                 rendered_button[
                                     "callback_data"] = callback_data
@@ -236,14 +230,20 @@ def tg_handler(data):
                 tg_request("editMessageMedia", rendered_message)
 
                 if "_contact" in state_args:
-                    tg_request(
-                        "deleteMessage",
-                        {
-                            "chat_id": tg_id,
-                            "message_id": state_args["_contact"],
-                        },
-                    )
+                    tg_request("deleteMessage", {
+                        "chat_id": tg_id,
+                        "message_id": state_args["_contact"],
+                    })
                     del state_args["_contact"]
+                    with Session(engine) as session:
+                        session.get(User, user_id).state_args = state_args
+                        session.commit()
+                if "_geo" in state_args:
+                    tg_request("deleteMessage", {
+                        "chat_id": tg_id,
+                        "message_id": state_args["_geo"],
+                    })
+                    del state_args["_geo"]
                     with Session(engine) as session:
                         session.get(User, user_id).state_args = state_args
                         session.commit()
@@ -267,6 +267,26 @@ def tg_handler(data):
                     with Session(engine) as session:
                         session.get(User, user_id).state_args = state_args
                         session.commit()
+                if "geo" in render_message:
+                    render_geo = render_message["geo"]
+                    state_args["_geo"] = tg_request(
+                        "sendMessage", {
+                            "chat_id": tg_id,
+                            "text": render_geo["text"],
+                            "reply_markup": {
+                                "keyboard": [
+                                    [
+                                        {
+                                            "text": render_geo["button"],
+                                            "request_location": True,
+                                        },
+                                    ],
+                                ],
+                            },
+                        })["message_id"]
+                    with Session(engine) as session:
+                        session.get(User, user_id).state_args = state_args
+                        session.commit()
 
         semaphore.release()
         dict_semaphore.acquire()
@@ -278,19 +298,16 @@ def tg_handler(data):
         dict_semaphore.release()
 
     if is_message:
-        tg_request(
-            "deleteMessage",
-            {
-                "chat_id": tg_id,
-                "message_id": data_message["message_id"],
-            },
-        )
+        tg_request("deleteMessage", {
+            "chat_id": tg_id,
+            "message_id": data_message["message_id"],
+        })
 
 
 flask = Flask(__name__)
 
 
-@flask.post("/" + getenv("WH_TOKEN"))
+@flask.post("/" + getenv("WH_TOKEN", ""))
 def flask_handler():
     spawn(tg_handler, request.json)
     return ("", 204)

@@ -16,3 +16,8 @@ python-levenshtein = "*"
 
 [requires]
 python_version = "3.10"
+
+[dev-packages]
+types-requests = "*"
+sqlalchemy-stubs = "*"
+fuzzywuzzy-stubs = "*"

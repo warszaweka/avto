@@ -71,31 +71,39 @@ CLIENT_ID = "client"
 def client_show(user_id, state_args):
     vendor_title = None
     with Session(engine["value"]) as session:
-        auto = session.execute(select(Auto).where(Auto.user_id == user_id)).scalars().first()
+        auto = session.get(User, user_id).auto
         if auto is not None:
             vendor_title = auto.vendor.title
             year = auto.year
             fuel = auto.fuel
             volume = auto.volume
+    render_button_change_auto_vendor = {
+        "text": "🚗 Изменить авто",
+        "callback": CHANGE_AUTO_VENDOR_ID,
+    }
+    render_button_support = {
+        "text": "📞 Поддержка",
+        "url": "tg://user?id=547862853",
+    }
     return {
         "text":
-        "Главное меню навигации Автопилота."
-        "\nВвод новых заявок и контроль уже поданных происходит отсюда."
-        + ("\nВаше авто:"
-            f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}" if vendor_title is not None else ""),
+        "Главное меню навигации Автопилота." +
+        "\nВвод новых заявок и контроль уже поданных происходит отсюда." +
+        ("\nВаше авто:" +
+         f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}"
+         if vendor_title is not None else ""),
+        "geo": {  # DEBUG
+            "text": "Geo text",  # DEBUG
+            "button": "Geo button",  # DEBUG
+        },  # DEBUG
         "keyboard": [
             [
-                {
-                    "text": "🚗 Изменить авто",
-                    "callback": CHANGE_AUTO_VENDOR_ID,
-                },
-            ] + ([
+                render_button_change_auto_vendor,
                 {
                     "text": "📝 Новая заявка",
                     "callback": CREATE_REQUEST_SPEC_ID,
                 },
-            ] if vendor_title is not None else []),
-        ] + ([
+            ],
             [
                 {
                     "text": "📄 Заявки в работе",
@@ -106,12 +114,13 @@ def client_show(user_id, state_args):
                     "callback": CLIENT_WINS_ID,
                 },
             ],
-        ] if vendor_title is not None else []) + [
             [
-                {
-                    "text": "📞 Поддержка",
-                    "url": "tg://user?id=547862853",
-                },
+                render_button_support,
+            ],
+        ] if vendor_title is not None else [
+            [
+                render_button_change_auto_vendor,
+                render_button_support,
             ],
         ],
     }
@@ -121,12 +130,11 @@ CHANGE_AUTO_VENDOR_ID = "change_auto_vendor"
 
 
 def change_auto_vendor_show(user_id, state_args):
-    is_search = False
+    search = None
     if "search" in state_args:
         search = state_args["search"]
-        is_search = True
     with Session(engine["value"]) as session:
-        if is_search:
+        if search is not None:
             vendors_dict = {
                 vendor.id: vendor.title
                 for vendor in session.query(Vendor).all()
@@ -422,9 +430,10 @@ def client_requests_show(user_id, state_args):
         requests_list = [{
             "id": request.id,
             "spec_title": request.spec.title,
-            } for request in session.execute(
-                select(Auto).where(
-                    Auto.user_id == user_id)).scalars().first().requests if request.active]
+        } for request in session.execute(
+            select(Auto).where(
+                Auto.user_id == user_id)).scalars().first().requests
+                         if request.active]
     return {
         "text":
         "Заявки на рассмотрении. Все просто."
