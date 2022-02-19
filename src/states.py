@@ -2,11 +2,12 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from fuzzywuzzy import process
+from geopy.distance import distance
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, FUEL_TEXT_MAP, Ars,
-                     Auto, Offer, Registration, Request, Spec, User, Vendor)
+from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, FUEL_TEXT_MAP, Auto,
+                     Offer, Registration, Request, Spec, User, Vendor)
 
 engine = {
     "value": None,
@@ -467,20 +468,30 @@ CLIENT_REQUEST_ID = "client_request"
 
 def client_request_show(user_id, state_args):
     request_id = state_args["id"]
+    offers_list = []
     with Session(engine["value"]) as session:
         request = session.get(Request, request_id)
         description = request.description
         spec_title = request.spec.title
-        offers_list = [{
-            "ars_id": offer.ars_id,
-            "cost_floor": offer.cost_floor,
-            "cost_ceil": offer.cost_ceil,
-        } for offer in request.offers]
+        for offer in request.offers:
+            ars = offer.ars
+            offers_list.append({
+                "ars_id": offer.ars_id,
+                "cost_floor": offer.cost_floor,
+                "cost_ceil": offer.cost_ceil,
+                "latitude": ars.latitude,
+                "longitude": ars.longitude,
+            })
         auto = request.auto
         vendor_title = auto.vendor.title
         year = auto.year
         fuel = auto.fuel
         volume = auto.volume
+    latitude = None
+    if "geo" in state_args:
+        geo = state_args["geo"]
+        latitude = float(Decimal(geo["latitude"]))
+        longitude = float(Decimal(geo["longitude"]))
     render_offers = []
     for offer_dict in offers_list:
         cost_ceil = offer_dict["cost_ceil"]
@@ -488,7 +499,12 @@ def client_request_show(user_id, state_args):
             {
                 "text":
                 str(offer_dict["cost_floor"]) +
-                (f"-{str(cost_ceil)}" if cost_ceil is not None else ""),
+                (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
+                (" " + str(
+                    distance((latitude, longitude),
+                             (float(offer_dict["latitude"]),
+                              float(offer_dict["longitude"]))).km) +
+                 " км" if latitude is not None else ""),
                 "callback": {
                     "state_id": CLIENT_OFFER_ID,
                     "handler_arg": str(offer_dict["ars_id"]),
@@ -515,11 +531,17 @@ def client_request_show(user_id, state_args):
                 },
             ],
         ] + render_offers,
+        "contact": {
+            "text": "Геопозиция",
+            "button": "📍 Геопозиция",
+        },
     }
 
 
 def client_request_callback(user_id, state_args, state_id, handler_arg):
+    del state_args["geo"]
     request_id = state_args["id"]
+    del state_args["id"]
     if state_id == CLIENT_OFFER_ID:
         state_args["request_id"] = request_id
         state_args["ars_id"] = int(handler_arg)
@@ -527,7 +549,14 @@ def client_request_callback(user_id, state_args, state_id, handler_arg):
         with Session(engine["value"]) as session:
             session.get(Request, request_id).active = False
             session.commit()
-    del state_args["id"]
+
+
+def client_request_geo(user_id, state_args, handler_arg):
+    state_args["geo"] = {
+        "latitude": str(handler_arg["latitude"]),
+        "longitude": str(handler_arg["longitude"]),
+    }
+    return CLIENT_REQUEST_ID
 
 
 CLIENT_OFFER_ID = "client_offer"

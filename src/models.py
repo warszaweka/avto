@@ -1,7 +1,8 @@
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.dialects.postgresql import (BIGINT, BOOLEAN, ENUM, INTEGER,
                                             JSONB, NUMERIC, VARCHAR)
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base  # type: ignore[attr-defined]
+from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column
 
 DeclarativeBase = declarative_base()
@@ -29,7 +30,7 @@ ars_spec = Table(
     Column("spec_id", BIGINT, ForeignKey("spec.id"), primary_key=True))
 
 
-class Spec(DeclarativeBase):
+class Spec(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "spec"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
@@ -39,7 +40,7 @@ class Spec(DeclarativeBase):
     arses = relationship("Ars", secondary=ars_spec, back_populates="specs")
 
 
-class Vendor(DeclarativeBase):
+class Vendor(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "vendor"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
@@ -48,7 +49,7 @@ class Vendor(DeclarativeBase):
     autos = relationship("Auto", back_populates="vendor")
 
 
-class User(DeclarativeBase):
+class User(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "user"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
@@ -65,7 +66,7 @@ class User(DeclarativeBase):
     ars = relationship("Ars", back_populates="user", uselist=False)
 
 
-class Callback(DeclarativeBase):
+class Callback(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "callback"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
@@ -77,7 +78,7 @@ class Callback(DeclarativeBase):
     user = relationship(User, back_populates="callbacks")
 
 
-class Auto(DeclarativeBase):
+class Auto(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "auto"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
@@ -94,7 +95,7 @@ class Auto(DeclarativeBase):
     requests = relationship("Request", back_populates="auto")
 
 
-class Ars(DeclarativeBase):
+class Ars(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "ars"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
@@ -116,7 +117,7 @@ class Ars(DeclarativeBase):
                                 uselist=False)
 
 
-class Registration(DeclarativeBase):
+class Registration(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "registration"
 
     ars_id = Column(BIGINT, ForeignKey(Ars.id), primary_key=True)
@@ -125,7 +126,7 @@ class Registration(DeclarativeBase):
     ars = relationship(Ars, back_populates="registration")
 
 
-class Request(DeclarativeBase):
+class Request(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "request"
 
     id = Column(BIGINT, autoincrement=True, primary_key=True)
@@ -139,7 +140,7 @@ class Request(DeclarativeBase):
     offers = relationship("Offer", back_populates="request")
 
 
-class Offer(DeclarativeBase):
+class Offer(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "offer"
 
     request_id = Column(BIGINT, ForeignKey(Request.id), primary_key=True)
