@@ -8,7 +8,7 @@ patch_psycopg()
 
 from decimal import Decimal
 from os import getenv
-from re import sub, re_compile
+from re import sub, compile as re_compile
 from sys import stderr
 from typing import Dict
 
