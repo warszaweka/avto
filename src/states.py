@@ -412,7 +412,7 @@ def create_request_description_text(user_id, state_args, handler_arg):
     with Session(engine["value"]) as session:
         request = Request(spec_id=spec_id,
                           description=handler_arg,
-                          auto_id=session.get(User, user_id).auto_id)
+                          auto_id=session.get(User, user_id).auto.id)
         session.add(request)
         session.commit()
         request_id = request.id
@@ -869,9 +869,9 @@ DILLER_REQUESTS_ID = "diller_requests"
 def diller_requests_show(user_id, state_args):
     requests_list = []
     with Session(engine["value"]) as session:
-        user = session.get(User, user_id)
-        ars_id = user.ars_id
-        spec_ids_list = [spec.id for spec in user.ars.specs]
+        ars = session.get(User, user_id).ars
+        ars_id = ars.id
+        spec_ids_list = [spec.id for spec in ars.specs]
         for request in session.query(Request).all():
             if not request.active:
                 continue
@@ -1041,7 +1041,7 @@ def create_offer_description_text(user_id, state_args, handler_arg):
     with Session(engine["value"]) as session:
         session.add(
             Offer(request_id=request_id,
-                  ars_id=session.get(User, user_id).ars_id,
+                  ars_id=session.get(User, user_id).ars.id,
                   cost_floor=cost_floor,
                   cost_ceil=cost_ceil,
                   description=handler_arg))
@@ -1094,7 +1094,7 @@ def diller_winner_show(user_id, state_args):
         offer = session.get(
             Offer, {
                 "request_id": request_id,
-                "ars_id": session.get(User, user_id).ars_id,
+                "ars_id": session.get(User, user_id).ars.id,
             })
         cost_floor = offer.cost_floor
         cost_ceil = offer.cost_ceil
