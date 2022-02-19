@@ -12,18 +12,6 @@ engine = {
     "value": None,
 }
 
-DEFAULT_VENDOR_TITLES_LIST = [
-    "Volkswagen",
-    "Renault",
-    "Skoda",
-    "Toyota",
-    "Ford",
-    "Opel",
-    "Hyundai",
-    "Mersedes-Benz",
-    "Daewoo",
-]
-
 START_ID = "start"
 
 
@@ -87,15 +75,10 @@ def client_show(user_id, state_args):
     }
     return {
         "text":
-        "Главное меню навигации Автопилота." +
-        "\nВвод новых заявок и контроль уже поданных происходит отсюда." +
-        ("\nВаше авто:" +
-         f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}"
-         if vendor_title is not None else ""),
-        "geo": {  # DEBUG
-            "text": "Geo text",  # DEBUG
-            "button": "Geo button",  # DEBUG
-        },  # DEBUG
+        "Главное меню навигации Автопилота.\nВвод новых заявок и контроль уж" +
+        "е поданных происходит отсюда." +
+        (f"\nВаше авто:\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
+         FUEL_TEXT_MAP[fuel] if vendor_title is not None else ""),
         "keyboard": [
             [
                 render_button_change_auto_vendor,
@@ -146,8 +129,18 @@ def change_auto_vendor_show(user_id, state_args):
                     Vendor.title == title)).scalars().first().id,
                 "title":
                 title,
-            } for title in DEFAULT_VENDOR_TITLES_LIST]
-    if is_search:
+            } for title in [
+                "Volkswagen",
+                "Renault",
+                "Skoda",
+                "Toyota",
+                "Ford",
+                "Opel",
+                "Hyundai",
+                "Mersedes-Benz",
+                "Daewoo",
+            ]]
+    if search is not None:
         vendors_list = [{
             "id": search_result[2],
             "title": search_result[0],
@@ -156,7 +149,8 @@ def change_auto_vendor_show(user_id, state_args):
         "text":
         "Выберите марку авто или введите вручную",
         "photo":
-        "AgACAgIAAxkBAAIDXGHxSaL6ORLMthA-QvusMDhD0A8OAALbuDEbZMaIS_H7E-LwbqZGAQADAgADcwADIwQ",
+        "AgACAgIAAxkBAAIDXGHxSaL6ORLMthA-QvusMDhD0A8OAALbuDEbZMaIS_H7E-LwbqZ" +
+        "GAQADAgADcwADIwQ",
         "keyboard": [
             [
                 {
@@ -213,7 +207,8 @@ def change_auto_year_show(user_id, state_args):
         "text":
         "Выберите год выпуска Вашего авто или введите вручную",
         "photo":
-        "AgACAgIAAxkBAAIDVWHxQV_vOdKeipTI5FNStBBJRbGMAAKyuDEbZMaIS3fMyQzlmN9BAQADAgADcwADIwQ",
+        "AgACAgIAAxkBAAIDVWHxQV_vOdKeipTI5FNStBBJRbGMAAKyuDEbZMaIS3fMyQzlmN9" +
+        "BAQADAgADcwADIwQ",
         "keyboard": [
             [
                 {
@@ -236,10 +231,11 @@ def change_auto_year_text(user_id, state_args, handler_arg):
     try:
         handler_arg = int(handler_arg)
     except ValueError:
-        state_args["status"] = "Не число"
+        state_args["_status"] = "Не число"
         return CHANGE_AUTO_YEAR_ID
-    if handler_arg < 1900 or handler_arg > date.today().year:
-        state_args["status"] = "Выходит за рамки [1900, this]"
+    today_year = date.today().year
+    if handler_arg < 1900 or handler_arg > today_year:
+        state_args["_status"] = f"Выходит за рамки [1900, {str(today_year)}]"
         return CHANGE_AUTO_YEAR_ID
     state_args["year"] = str(handler_arg)
     return CHANGE_AUTO_FUEL_ID
@@ -253,7 +249,8 @@ def change_auto_fuel_show(user_id, state_args):
         "text":
         "Выберите вид топлива авто",
         "photo":
-        "AgACAgIAAxkBAAIDVGHxPdZzlJPa7wITyeubx5_F-_OcAAKouDEbZMaISxJEH1CrzvwLAQADAgADcwADIwQ",
+        "AgACAgIAAxkBAAIDVGHxPdZzlJPa7wITyeubx5_F-_OcAAKouDEbZMaISxJEH1Crzvw" +
+        "LAQADAgADcwADIwQ",
         "keyboard": [
             [
                 {
@@ -287,9 +284,11 @@ CHANGE_AUTO_VOLUME_ID = "change_auto_volume"
 def change_auto_volume_show(user_id, state_args):
     return {
         "text":
-        "Введите объем двигателя Вашего авто в литрах, через точку. Пример:  1.2",
+        "Введите объем двигателя Вашего авто в литрах, через точку. Пример: " +
+        " 1.2",
         "photo":
-        "AgACAgIAAxkBAAIDVmHxQZoAAb8BlKhqC-GWxFt-h1ZrpwACtbgxG2TGiEtDJrZQZfnmNQEAAwIAA3MAAyME",
+        "AgACAgIAAxkBAAIDVmHxQZoAAb8BlKhqC-GWxFt-h1ZrpwACtbgxG2TGiEtDJrZQZfn" +
+        "mNQEAAwIAA3MAAyME",
         "keyboard": [
             [
                 {
@@ -311,10 +310,10 @@ def change_auto_volume_text(user_id, state_args, handler_arg):
     try:
         handler_arg = Decimal(handler_arg)
     except InvalidOperation:
-        state_args["status"] = "Не число"
+        state_args["_status"] = "Не число"
         return CHANGE_AUTO_VOLUME_ID
     if handler_arg < 0 or handler_arg > 10:
-        state_args["status"] = "Выходит за рамки [0, 10]"
+        state_args["_status"] = "Выходит за рамки [0, 10]"
         return CHANGE_AUTO_VOLUME_ID
     fuel = state_args["fuel"]
     del state_args["fuel"]
@@ -323,8 +322,7 @@ def change_auto_volume_text(user_id, state_args, handler_arg):
     vendor_id = state_args["vendor_id"]
     del state_args["vendor_id"]
     with Session(engine["value"]) as session:
-        auto = session.execute(
-            select(Auto).where(Auto.user_id == user_id)).scalars().first()
+        auto = session.get(User, user_id).auto
         if auto is None:
             session.add(
                 Auto(vendor_id=vendor_id,
@@ -352,8 +350,9 @@ def create_request_spec_show(user_id, state_args):
         } for spec in session.query(Spec).all()]
     return {
         "text":
-        "Укажите какие услуги СТО вам необходимы и двигаемся далее. Если есть сомнения, в следующе"\
-        "м окне вы сможете описать техническую проблему.",
+        "Укажите какие услуги СТО вам необходимы и двигаемся далее. Если ест" +
+        "ь сомнения, в следующем окне вы сможете описать техническую проблем" +
+        "у.",
         "keyboard": [
             [
                 {
@@ -383,9 +382,11 @@ CREATE_REQUEST_DESCRIPTION_ID = "create_request_description"
 
 def create_request_description_show(user_id, state_args):
     return {
-        "text": "Если вы хотите добавить описание или комментарий к ремонту, то это можно сделать"\
-        " сейчас. Это необязательное для заполнения поле, но любая дополнительная информация помо"\
-        "жет нашим специалистам в решении проблемы.",
+        "text":
+        "Если вы хотите добавить описание или комментарий к ремонту," +
+        " то это можно сделать сейчас. Это необязательное для заполнения пол" +
+        "е, но любая дополнительная информация поможет нашим специалистам в " +
+        "решении проблемы.",
         "keyboard": [
             [
                 {
@@ -404,17 +405,14 @@ def create_request_description_callback(user_id, state_args, state_id,
 
 def create_request_description_text(user_id, state_args, handler_arg):
     if len(handler_arg) > DESCRIPTION_LENGTH:
-        state_args["status"] = "Слишком длинный"
+        state_args["_status"] = "Слишком длинный"
         return CREATE_REQUEST_DESCRIPTION_ID
     spec_id = state_args["spec_id"]
     del state_args["spec_id"]
     with Session(engine["value"]) as session:
-        request = Request(
-            spec_id=spec_id,
-            description=handler_arg,
-            auto_id=session.execute(
-                select(Auto).where(
-                    Auto.user_id == user_id)).scalars().first().id)
+        request = Request(spec_id=spec_id,
+                          description=handler_arg,
+                          auto_id=session.get(User, user_id).auto_id)
         session.add(request)
         session.commit()
         request_id = request.id
@@ -430,16 +428,16 @@ def client_requests_show(user_id, state_args):
         requests_list = [{
             "id": request.id,
             "spec_title": request.spec.title,
-        } for request in session.execute(
-            select(Auto).where(
-                Auto.user_id == user_id)).scalars().first().requests
+        } for request in session.get(User, user_id).auto.requests
                          if request.active]
     return {
         "text":
-        "Заявки на рассмотрении. Все просто."
-        "\nПо каждой заявке Вы получите несколько предложений от СТО. Все предложения действительны 15 минут, поэтому желательно уложиться с выбором в этот промежуток времени."
-        "\nЛучшее из предложений Вы акцептуете и в предложенное время направляетесь на СТО для ремонта."
-        "\nДетально вы можете видеть статус и перейти к конкретной заявке для ее подтверждения.",
+        "Заявки на рассмотрении. Все просто.\nПо каждой заявке Вы получите н" +
+        "есколько предложений от СТО. Все предложения действительны 15 минут" +
+        ", поэтому желательно уложиться с выбором в этот промежуток времени." +
+        "\nЛучшее из предложений Вы акцептуете и в предложенное время направ" +
+        "ляетесь на СТО для ремонта.\nДетально вы можете видеть статус и пер" +
+        "ейти к конкретной заявке для ее подтверждения.",
         "keyboard": [
             [
                 {
@@ -449,7 +447,7 @@ def client_requests_show(user_id, state_args):
             ],
         ] + [[
             {
-                "text": f"{i + 1}. {request_dict['spec_title']}",
+                "text": f"{i + 1}. " + request_dict["spec_title"],
                 "callback": {
                     "state_id": CLIENT_REQUEST_ID,
                     "handler_arg": str(request_dict["id"]),
@@ -490,7 +488,7 @@ def client_request_show(user_id, state_args):
             {
                 "text":
                 str(offer_dict["cost_floor"]) +
-                ("-" + str(cost_ceil) if cost_ceil is not None else ""),
+                (f"-{str(cost_ceil)}" if cost_ceil is not None else ""),
                 "callback": {
                     "state_id": CLIENT_OFFER_ID,
                     "handler_arg": str(offer_dict["ars_id"]),
@@ -499,9 +497,9 @@ def client_request_show(user_id, state_args):
         ])
     return {
         "text":
-        f"Ваш автомобиль: {vendor_title}, {str(year)}, {str(volume)}, {FUEL_TEXT_MAP[fuel]}."
-        f"\nОтправлена заявка на следующие услуги ремонта: {spec_title}."
-        f"\nКомментарий: {description}.",
+        f"Ваш автомобиль: {vendor_title}, {str(year)}, {str(volume)}, " +
+        f"{FUEL_TEXT_MAP[fuel]}.\nОтправлена заявка на следующие услуги ремо" +
+        f"нта: {spec_title}.\nКомментарий: {description}.",
         "keyboard": [
             [
                 {
@@ -547,9 +545,9 @@ def client_offer_show(user_id, state_args):
         description = offer.description
     return {
         "text":
-        "Оффер\n\n" + str(cost_floor) +
-        ("-" + str(cost_ceil) if cost_ceil is not None else "") + "\n" +
-        description,
+        f"Оффер\n\n{str(cost_floor)}" +
+        (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
+        f"\n{description}",
         "keyboard": [
             [
                 {
@@ -574,7 +572,7 @@ def client_offer_callback(user_id, state_args, state_id, handler_arg):
             "ars_id": state_args["ars_id"],
         }
         with Session(engine["value"]) as session:
-            offer = sesion.get(Offer, offer_id)
+            offer = session.get(Offer, offer_id)
             offer.request.active = False
             offer.winner = True
             session.commit()
@@ -588,21 +586,18 @@ CLIENT_WINS_ID = "client_wins"
 def client_wins_show(user_id, state_args):
     requests_list = []
     with Session(engine["value"]) as session:
-        for request in session.execute(
-                select(Auto).where(
-                    Auto.user_id == user_id)).scalars().first().requests:
+        for request in session.get(User, user_id).auto.requests:
             if request.active:
                 continue
-            is_win = False
             for offer in request.offers:
                 if offer.winner:
-                    is_win = True
                     break
-            if is_win:
-                requests_list.append({
-                    "id": request.id,
-                    "spec_title": request.spec.title,
-                })
+            else:
+                continue
+            requests_list.append({
+                "id": request.id,
+                "spec_title": request.spec.title,
+            })
     return {
         "text":
         "Акцепты",
@@ -644,17 +639,16 @@ def client_win_show(user_id, state_args):
                 cost_ceil = offer.cost_ceil
                 description = offer.description
                 ars = offer.ars
-                ars_title = ars.title
+                title = ars.title
                 ars_description = ars.description
-                ars_address = ars.address
-                ars_picture = ars.picture
+                address = ars.address
+                picture = ars.picture
                 break
     render_message = {
         "text":
-        "Акцепт\n\n" + spec_title + "\n" + str(cost_floor) +
-        ("-" + str(cost_ceil) if cost_ceil is not None else "") + "\n" +
-        description + "\n" + ars_title + "\n" + ars_description + "\n" +
-        ars_address,
+        f"Акцепт\n\n{spec_title}\n{str(cost_floor)}" +
+        (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
+        f"\n{description}\n{title}\n{ars_description}\n{address}",
         "keyboard": [
             [
                 {
@@ -664,8 +658,8 @@ def client_win_show(user_id, state_args):
             ],
         ],
     }
-    if ars_picture is not None:
-        render_message["photo"] = ars_picture
+    if picture is not None:
+        render_message["photo"] = picture
     return render_message
 
 
@@ -678,50 +672,42 @@ DILLER_ID = "diller"
 
 def diller_show(user_id, state_args):
     with Session(engine["value"]) as session:
-        ars = session.execute(
-            select(Ars).where(Ars.user_id == user_id)).scalars().first()
+        ars = session.get(User, user_id).ars
         title = ars.title
         description = ars.description
         picture = ars.picture
         spec_titles_list = [spec.title for spec in ars.specs]
     render_message = {
         "text":
-        "Диллер\n\n" + title + "\n" + description + "\n" +
-        " ".join(spec_titles_list),
+        f"Диллер\n\n{title}\n{description}\n" + " ".join(spec_titles_list),
         "keyboard": [
             [
                 {
-                    "text": "Изменить название",
+                    "text": "✍ Изменить название",
                     "callback": CHANGE_ARS_TITLE_ID,
                 },
-            ],
-            [
                 {
-                    "text": "Изменить описание",
+                    "text": "✍ Изменить описание",
                     "callback": CHANGE_ARS_DESCRIPTION_ID,
                 },
             ],
             [
                 {
-                    "text": "Изменить изображение",
+                    "text": "✍ Изменить изображение",
                     "callback": CHANGE_ARS_PICTURE_ID,
                 },
-            ],
-            [
                 {
-                    "text": "Изменить специализации",
+                    "text": "✍ Изменить специализации",
                     "callback": CHANGE_ARS_SPECS_ID,
                 },
             ],
             [
                 {
-                    "text": "Заявки",
+                    "text": "📄 Заявки",
                     "callback": DILLER_REQUESTS_ID,
                 },
-            ],
-            [
                 {
-                    "text": "Победители",
+                    "text": "📒 Акцепты",
                     "callback": DILLER_WINNERS_ID,
                 },
             ],
@@ -736,9 +722,7 @@ def diller_callback(user_id, state_args, state_id, handler_arg):
     if state_id == CHANGE_ARS_SPECS_ID:
         with Session(engine["value"]) as session:
             spec_ids_list = [
-                spec.id for spec in session.execute(
-                    select(Ars).where(
-                        Ars.user_id == user_id)).scalars().first().specs
+                spec.id for spec in session.get(User, user_id).ars.specs
             ]
         state_args["spec_ids"] = spec_ids_list
 
@@ -752,7 +736,7 @@ def change_ars_title_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": DILLER_ID,
                 },
             ],
@@ -762,11 +746,10 @@ def change_ars_title_show(user_id, state_args):
 
 def change_ars_title_text(user_id, state_args, handler_arg):
     if len(handler_arg) > ARS_TITLE_LENGTH:
-        state_args["status"] = "Слишком длинный"
+        state_args["_status"] = "Слишком длинный"
         return CHANGE_ARS_TITLE_ID
     with Session(engine["value"]) as session:
-        session.execute(select(Ars).where(
-            Ars.user_id == user_id)).scalars().first().title = handler_arg
+        session.get(User, user_id).ars.title = handler_arg
         session.commit()
     return DILLER_ID
 
@@ -780,7 +763,7 @@ def change_ars_description_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": DILLER_ID,
                 },
             ],
@@ -790,11 +773,10 @@ def change_ars_description_show(user_id, state_args):
 
 def change_ars_description_text(user_id, state_args, handler_arg):
     if len(handler_arg) > DESCRIPTION_LENGTH:
-        state_args["status"] = "Слишком длинный"
+        state_args["_status"] = "Слишком длинный"
         return CHANGE_ARS_DESCRIPTION_ID
     with Session(engine["value"]) as session:
-        session.execute(select(Ars).where(Ars.user_id == user_id)).scalars(
-        ).first().description = handler_arg
+        session.get(User, user_id).ars.description = handler_arg
         session.commit()
     return DILLER_ID
 
@@ -808,7 +790,7 @@ def change_ars_picture_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": DILLER_ID,
                 },
             ],
@@ -818,8 +800,7 @@ def change_ars_picture_show(user_id, state_args):
 
 def change_ars_picture_photo(user_id, state_args, handler_arg):
     with Session(engine["value"]) as session:
-        session.execute(select(Ars).where(
-            Ars.user_id == user_id)).scalars().first().picture = handler_arg
+        session.get(User, user_id).ars.picture = handler_arg
         session.commit()
     return DILLER_ID
 
@@ -829,21 +810,25 @@ CHANGE_ARS_SPECS_ID = "change_ars_specs"
 
 def change_ars_specs_show(user_id, state_args):
     spec_ids_list = state_args["spec_ids"]
+    specs_list = []
+    spec_titles_list = []
     with Session(engine["value"]) as session:
-        specs_list = [{
-            "id": spec.id,
-            "title": spec.title,
-        } for spec in session.query(Spec).all()]
-        spec_titles_list = [
-            session.get(Spec, spec_id).title for spec_id in spec_ids_list
-        ]
+        for spec in session.query(Spec).all():
+            spec_id = spec.id
+            spec_title = spec.title
+            specs_list.append({
+                "id": spec_id,
+                "title": spec_title,
+            })
+            if spec_id in spec_ids_list:
+                spec_titles_list.append(spec_title)
     return {
         "text":
         "Выберите специализацию\n\n" + " ".join(spec_titles_list),
         "keyboard": [
             [
                 {
-                    "text": "Кабинет",
+                    "text": "🔙 Назад",
                     "callback": DILLER_ID,
                 },
             ],
@@ -864,8 +849,7 @@ def change_ars_specs_callback(user_id, state_args, state_id, handler_arg):
     if state_id == DILLER_ID:
         del state_args["spec_ids"]
         with Session(engine["value"]) as session:
-            ars = session.execute(
-                select(Ars).where(Ars.user_id == user_id)).scalars().first()
+            ars = session.get(User, user_id).ars
             specs = ars.specs
             specs.clear()
             for spec_id in spec_ids_list:
@@ -885,30 +869,29 @@ DILLER_REQUESTS_ID = "diller_requests"
 def diller_requests_show(user_id, state_args):
     requests_list = []
     with Session(engine["value"]) as session:
-        ars = session.execute(
-            select(Ars).where(Ars.user_id == user_id)).scalars().first()
-        ars_id = ars.id
-        spec_ids_list = [spec.id for spec in ars.specs]
+        user = session.get(User, user_id)
+        ars_id = user.ars_id
+        spec_ids_list = [spec.id for spec in user.ars.specs]
         for request in session.query(Request).all():
-            spec = request.spec
-            if spec.id in spec_ids_list:
-                skip = False
-                for offer in request.offers:
-                    if offer.winner or offer.ars_id == ars_id:
-                        skip = True
-                        break
-                if not skip:
-                    requests_list.append({
-                        "id": request.id,
-                        "spec_title": spec.title,
-                    })
+            if not request.active:
+                continue
+            if request.spec_id not in spec_ids_list:
+                continue
+            for offer in request.offers:
+                if offer.ars_id == ars_id:
+                    break
+            else:
+                requests_list.append({
+                    "id": request.id,
+                    "spec_title": request.spec.title,
+                })
     return {
         "text":
         "Заявки",
         "keyboard": [
             [
                 {
-                    "text": "Кабинет",
+                    "text": "🔙 Назад",
                     "callback": DILLER_ID,
                 },
             ],
@@ -940,17 +923,15 @@ def diller_request_show(user_id, state_args):
         description = request.description
     return {
         "text":
-        "Заявка\n\n" + spec_title + "\n" + description,
+        f"Заявка\n\n{spec_title}\n{description}",
         "keyboard": [
             [
                 {
-                    "text": "Заявки",
+                    "text": "🔙 Назад",
                     "callback": DILLER_REQUESTS_ID,
                 },
-            ],
-            [
                 {
-                    "text": "Создать оффер",
+                    "text": "📝 Создать оффер",
                     "callback": CREATE_OFFER_COST_ID,
                 },
             ],
@@ -969,11 +950,12 @@ CREATE_OFFER_COST_ID = "create_offer_cost"
 
 def create_offer_cost_show(user_id, state_args):
     return {
-        "text": "Введите цену или ценовой диапазон",
+        "text":
+        "Введите цену или ценовой диапазон",
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": DILLER_REQUEST_ID,
                 },
             ],
@@ -990,26 +972,26 @@ def create_offer_cost_text(user_id, state_args, handler_arg):
     splitted = handler_arg.split("-")
     len_splitted = len(splitted)
     if len_splitted > 2:
-        state_args["status"] = "Неверный формат"
+        state_args["_status"] = "Неверный формат"
         return CREATE_OFFER_COST_ID
     try:
         cost_floor = int(splitted[0])
     except ValueError:
-        state_args["status"] = "cost_floor не число"
+        state_args["_status"] = "cost_floor не число"
         return CREATE_OFFER_COST_ID
     if not 0 < cost_floor < 1000000:
-        state_args["status"] = "cost_floor выходит за диапазон [1, 999999]"
+        state_args["_status"] = "cost_floor выходит за диапазон [1, 999999]"
         return CREATE_OFFER_COST_ID
     cost_ceil = None
     if len_splitted == 2:
         try:
             cost_ceil = int(splitted[1])
         except ValueError:
-            state_args["status"] = "cost_ceil не число"
+            state_args["_status"] = "cost_ceil не число"
             return CREATE_OFFER_COST_ID
         if not cost_floor < cost_ceil < 1000000:
-            state_args[
-                "status"] = "cost_ceil выходит за диапазон [cost_floor + 1, 999999]"
+            state_args["_status"] = "cost_ceil выходит за диапазон [cost_fl" +\
+                "oor + 1, 999999]"
             return CREATE_OFFER_COST_ID
     state_args["cost_floor"] = cost_floor
     if cost_ceil is not None:
@@ -1022,11 +1004,12 @@ CREATE_OFFER_DESCRIPTION_ID = "create_offer_description"
 
 def create_offer_description_show(user_id, state_args):
     return {
-        "text": "Введите описание",
+        "text":
+        "Введите описание",
         "keyboard": [
             [
                 {
-                    "text": "Отменить",
+                    "text": "❌ Отменить",
                     "callback": DILLER_REQUEST_ID,
                 },
             ],
@@ -1045,7 +1028,7 @@ def create_offer_description_callback(user_id, state_args, state_id,
 
 def create_offer_description_text(user_id, state_args, handler_arg):
     if len(handler_arg) > DESCRIPTION_LENGTH:
-        state_args["status"] = "Слишком длинный"
+        state_args["_status"] = "Слишком длинный"
         return CREATE_OFFER_DESCRIPTION_ID
     cost_floor = state_args["cost_floor"]
     del state_args["cost_floor"]
@@ -1058,9 +1041,7 @@ def create_offer_description_text(user_id, state_args, handler_arg):
     with Session(engine["value"]) as session:
         session.add(
             Offer(request_id=request_id,
-                  ars_id=session.execute(
-                      select(Ars).where(
-                          Ars.user_id == user_id)).scalars().first().id,
+                  ars_id=session.get(User, user_id).ars_id,
                   cost_floor=cost_floor,
                   cost_ceil=cost_ceil,
                   description=handler_arg))
@@ -1076,16 +1057,14 @@ def diller_winners_show(user_id, state_args):
         offers_list = [{
             "request_id": offer.request_id,
             "spec_title": offer.request.spec.title,
-        } for offer in session.execute(
-            select(Ars).where(Ars.user_id == user_id)).scalars().first().offers
-                       if offer.winner]
+        } for offer in session.get(User, user_id).ars.offers if offer.winner]
     return {
         "text":
-        "Победители",
+        "Акцепты",
         "keyboard": [
             [
                 {
-                    "text": "Кабинет",
+                    "text": "🔙 Назад",
                     "callback": DILLER_ID,
                 },
             ],
@@ -1114,11 +1093,8 @@ def diller_winner_show(user_id, state_args):
     with Session(engine["value"]) as session:
         offer = session.get(
             Offer, {
-                "request_id":
-                request_id,
-                "ars_id":
-                session.execute(select(Ars).where(
-                    Ars.user_id == user_id)).scalars().first().id,
+                "request_id": request_id,
+                "ars_id": session.get(User, user_id).ars_id,
             })
         cost_floor = offer.cost_floor
         cost_ceil = offer.cost_ceil
@@ -1126,18 +1102,17 @@ def diller_winner_show(user_id, state_args):
         request = offer.request
         spec_title = request.spec.title
         auto = request.auto
-        auto_year = auto.year
-        auto_fuel = auto.fuel
+        year = auto.year
+        fuel = auto.fuel
     return {
         "text":
-        "Победитель\n\n" + str(cost_floor) +
-        ("-" + str(cost_ceil) if cost_ceil is not None else "") + "\n" +
-        description + "\n" + spec_title + "\n" + auto_year + "\n" +
-        FUEL_TEXT_MAP[auto_fuel],
+        f"Акцепт\n\n{str(cost_floor)}" +
+        (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
+        f"\n{description}\n{spec_title}\n{year}\n{FUEL_TEXT_MAP[fuel]}",
         "keyboard": [
             [
                 {
-                    "text": "Победители",
+                    "text": "🔙 Назад",
                     "callback": DILLER_WINNERS_ID,
                 },
             ],

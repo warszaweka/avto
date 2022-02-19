@@ -6,6 +6,7 @@ from psycogreen.gevent import patch_psycopg
 
 patch_psycopg()
 
+from decimal import Decimal
 from os import getenv
 from re import sub
 from sys import stderr
@@ -71,6 +72,13 @@ def tg_handler(data):
             if data_message_contact["user_id"] == tg_id:
                 update_type = "contact"
                 handler_arg = data_message_contact["phone_number"]
+        elif "location" in data_message:
+            update_type = "geo"
+            data_message_location = data_message["location"]
+            handler_arg = {
+                "latitude": Decimal(data_message_location["latitude"]),
+                "longitude": Decimal(data_message_location["longitude"]),
+            }
     elif "callback_query" in data:
         data_callback_query = data["callback_query"]
         tg_id = data_callback_query["from"]["id"]
@@ -143,7 +151,7 @@ def tg_handler(data):
                 automaton = False
                 automaton_handler = getattr(states,
                                             f"{state_id}_{update_type}", None)
-                if update_type in ["text", "photo", "contact"]:
+                if update_type in ["text", "photo", "contact", "geo"]:
                     if automaton_handler is not None:
                         automaton_return = automaton_handler(
                             user_id, state_args, handler_arg)
