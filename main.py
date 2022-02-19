@@ -25,8 +25,8 @@ from src.models import Callback, DeclarativeBase, User
 from src.states import START_ID
 from src.states import engine as states_engine
 
-WP_ID = "AgACAgIAAxkBAAIDNGHfEPbUj7t3qprC-KO7lt1JjgXGAAIBuTEbLv34SoRDr_9uF" + \
-    "707AQADAgADcwADIwQ"
+WP_ID = "AgACAgIAAxkBAAMCYhD0ezPu0APUdAJfDAhP491UCPcAAnS9MRvcWYhInPNDOCEatD" +\
+    "oBAAMCAAN4AAMjBA"
 
 engine = create_engine(
     sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL", ""), 1))

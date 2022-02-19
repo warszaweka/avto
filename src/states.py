@@ -149,8 +149,8 @@ def change_auto_vendor_show(user_id, state_args):
         "text":
         "Выберите марку авто или введите вручную",
         "photo":
-        "AgACAgIAAxkBAAIDXGHxSaL6ORLMthA-QvusMDhD0A8OAALbuDEbZMaIS_H7E-LwbqZ" +
-        "GAQADAgADcwADIwQ",
+        "AgACAgIAAxkBAAMDYhD08GYEgB-QOQABOg0i_4jZHdh2AAI7uzEbppeJSBpyNfdzkIR" +
+        "jAQADAgADbQADIwQ",
         "keyboard": [
             [
                 {
@@ -207,8 +207,8 @@ def change_auto_year_show(user_id, state_args):
         "text":
         "Выберите год выпуска Вашего авто или введите вручную",
         "photo":
-        "AgACAgIAAxkBAAIDVWHxQV_vOdKeipTI5FNStBBJRbGMAAKyuDEbZMaIS3fMyQzlmN9" +
-        "BAQADAgADcwADIwQ",
+        "AgACAgIAAxkBAAMEYhD1RR5D2zDHR3xjrWAguMcr1AcAAjy7MRuml4lI7rxRFjBqx10" +
+        "BAAMCAANzAAMjBA",
         "keyboard": [
             [
                 {
@@ -249,8 +249,8 @@ def change_auto_fuel_show(user_id, state_args):
         "text":
         "Выберите вид топлива авто",
         "photo":
-        "AgACAgIAAxkBAAIDVGHxPdZzlJPa7wITyeubx5_F-_OcAAKouDEbZMaISxJEH1Crzvw" +
-        "LAQADAgADcwADIwQ",
+        "AgACAgIAAxkBAAMFYhD1p7zzfwlP9qg2jtpAJv5ppzoAAj27MRuml4lIfyniNP4sfnM" +
+        "BAAMCAANtAAMjBA",
         "keyboard": [
             [
                 {
@@ -287,8 +287,8 @@ def change_auto_volume_show(user_id, state_args):
         "Введите объем двигателя Вашего авто в литрах, через точку. Пример: " +
         " 1.2",
         "photo":
-        "AgACAgIAAxkBAAIDVmHxQZoAAb8BlKhqC-GWxFt-h1ZrpwACtbgxG2TGiEtDJrZQZfn" +
-        "mNQEAAwIAA3MAAyME",
+        "AgACAgIAAxkBAAMGYhD16IV61M6ZYIXzexMhDGFOeCAAAj67MRuml4lIA9oJSWsxvSk" +
+        "BAAMCAANzAAMjBA",
         "keyboard": [
             [
                 {
