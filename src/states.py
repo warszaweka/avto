@@ -490,8 +490,8 @@ def client_request_show(user_id, state_args):
     latitude = None
     if "geo" in state_args:
         geo = state_args["geo"]
-        latitude = float(Decimal(geo["latitude"]))
-        longitude = float(Decimal(geo["longitude"]))
+        latitude = float(geo["latitude"])
+        longitude = float(geo["longitude"])
     render_offers = []
     for offer_dict in offers_list:
         cost_ceil = offer_dict["cost_ceil"]
@@ -531,7 +531,7 @@ def client_request_show(user_id, state_args):
                 },
             ],
         ] + render_offers,
-        "contact": {
+        "geo": {
             "text": "Геопозиция",
             "button": "📍 Геопозиция",
         },
@@ -539,7 +539,8 @@ def client_request_show(user_id, state_args):
 
 
 def client_request_callback(user_id, state_args, state_id, handler_arg):
-    del state_args["geo"]
+    if "geo" in state_args:
+        del state_args["geo"]
     request_id = state_args["id"]
     del state_args["id"]
     if state_id == CLIENT_OFFER_ID:

@@ -79,8 +79,8 @@ def tg_handler(data):
             update_type = "geo"
             data_message_location = data_message["location"]
             handler_arg = {
-                "latitude": Decimal(data_message_location["latitude"]),
-                "longitude": Decimal(data_message_location["longitude"]),
+                "latitude": data_message_location["latitude"],
+                "longitude": data_message_location["longitude"],
             }
     elif "callback_query" in data:
         data_callback_query = data["callback_query"]
