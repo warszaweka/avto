@@ -8,7 +8,7 @@ patch_psycopg()
 
 from decimal import Decimal
 from os import getenv
-from re import sub
+from re import sub, re_compile
 from sys import stderr
 from typing import Dict
 
@@ -27,6 +27,7 @@ from src.states import engine as states_engine
 
 WP_ID = "AgACAgIAAxkBAAMCYhD0ezPu0APUdAJfDAhP491UCPcAAnS9MRvcWYhInPNDOCEatD" +\
     "oBAAMCAAN4AAMjBA"
+contact_re = re_compile(r"[^0-9]*")
 
 engine = create_engine(
     sub(r"^[^:]*", "postgresql+psycopg2", getenv("DATABASE_URL", ""), 1))
@@ -68,7 +69,7 @@ def tg_handler(data):
             update_type = "photo"
             handler_arg = data_message["photo"][0]["file_id"]
         elif "contact" in data_message:
-            data_message_contact = data_message["contact"]
+            data_message_contact = contact_re.sub("", data_message["contact"])
             if data_message_contact["user_id"] == tg_id:
                 update_type = "contact"
                 handler_arg = data_message_contact["phone_number"]
