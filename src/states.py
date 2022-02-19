@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from math import ceil
 
 from fuzzywuzzy import process
 from geopy.distance import distance
@@ -501,9 +502,10 @@ def client_request_show(user_id, state_args):
                 str(offer_dict["cost_floor"]) +
                 (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
                 (" " + str(
-                    distance((latitude, longitude),
-                             (float(offer_dict["latitude"]),
-                              float(offer_dict["longitude"]))).km) +
+                    ceil(
+                        distance((latitude, longitude),
+                                 (float(offer_dict["latitude"]),
+                                  float(offer_dict["longitude"]))).km)) +
                  " км" if latitude is not None else ""),
                 "callback": {
                     "state_id": CLIENT_OFFER_ID,
