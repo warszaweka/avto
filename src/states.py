@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 from math import ceil
 
@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, FUEL_TEXT_MAP, Auto,
-                     Offer, Registration, Request, Spec, User, Vendor)
+                     Occupation, Offer, Registration, Request, Spec, User,
+                     Vendor)
 
 engine = {
     "value": None,
@@ -743,6 +744,12 @@ def diller_show(user_id, state_args):
                     "callback": DILLER_WINNERS_ID,
                 },
             ],
+            [
+                {
+                    "text": "📅 Планировщик",
+                    "callback": OCCUPATIONS_DATE_ID,
+                },
+            ],
         ],
     }
     if picture is not None:
@@ -1154,3 +1161,83 @@ def diller_winner_show(user_id, state_args):
 
 def diller_winner_callback(user_id, state_args, state_id, handler_arg):
     del state_args["request_id"]
+
+
+OCCUPATIONS_DATE_ID = "occupations_date"
+
+
+def occupations_date_show(user_id, state_args):
+    today_date = date.today()
+    render_dates = []
+    for i in range(7):
+        str_date = (today_date + timedelta(days=i)).isoformat()
+        render_dates.append([
+            {
+                "text": str_date,
+                "callback": {
+                    "state_id": OCCUPATIONS_TIME_ID,
+                    "handler_arg": str_date,
+                },
+            },
+        ])
+    return {
+        "text":
+        "Запланировать дату и время ремонтных работ",
+        "keyboard": [
+            [
+                {
+                    "text": "🔙 Назад",
+                    "callback": DILLER_ID,
+                },
+            ],
+        ] + render_dates,
+    }
+
+
+def occupations_date_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == OCCUPATIONS_TIME_ID:
+        state_args["date"] = handler_arg
+
+
+OCCUPATIONS_TIME_ID = "occupations_time"
+
+
+def occupations_time_show(user_id, state_args):
+    render_times = []
+    for i in range(4):
+        render_times_row = []
+        for j in range(3):
+            str_time = time(9 + i + j * 4).isoformat()
+            render_times_row.append({
+                "text": str_time,
+                "callback": {
+                    "state_id": OCCUPATIONS_TIME_ID,
+                    "handler_arg": str_time,
+                },
+            })
+        render_times.append(render_times_row)
+    return {
+        "text":
+        "Запланировать дату и время ремонтных работ",
+        "keyboard": [
+            [
+                {
+                    "text": "🔙 Назад",
+                    "callback": OCCUPATIONS_DATE_ID,
+                },
+            ],
+        ] + render_times,
+    }
+
+
+def occupations_time_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == OCCUPATIONS_DATE_ID:
+        del state_args["date"]
+        return
+    with Session(engine["value"]) as session:
+        session.add(
+            Occupation(time=datetime.combine(
+                date.fromisoformat(state_args["date"]),
+                time.fromisoformat(handler_arg)),
+                       ars_id=session.get(User, user_id).ars.id))
+        session.commit()

@@ -163,7 +163,7 @@ def tg_handler(data):
                             automaton = True
                 elif handler_arg in callbacks_list:
                     if ":" in handler_arg:
-                        state_id, handler_arg = handler_arg.split(":")
+                        state_id, handler_arg = handler_arg.split(":", 1)
                     else:
                         state_id = handler_arg
                         handler_arg = None

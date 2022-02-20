@@ -1,6 +1,6 @@
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.dialects.postgresql import (BIGINT, BOOLEAN, ENUM, INTEGER,
-                                            JSONB, NUMERIC, VARCHAR)
+                                            JSONB, NUMERIC, TIMESTAMP, VARCHAR)
 from sqlalchemy.orm import declarative_base  # type: ignore[attr-defined]
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column
@@ -115,6 +115,7 @@ class Ars(DeclarativeBase):  # type: ignore[valid-type, misc]
     registration = relationship("Registration",
                                 back_populates="ars",
                                 uselist=False)
+    occupations = relationship("Occupation", back_populates="ars")
 
 
 class Registration(DeclarativeBase):  # type: ignore[valid-type, misc]
@@ -132,8 +133,8 @@ class Request(DeclarativeBase):  # type: ignore[valid-type, misc]
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     spec_id = Column(BIGINT, ForeignKey(Spec.id), nullable=False)
     description = Column(VARCHAR(DESCRIPTION_LENGTH), nullable=False)
-    auto_id = Column(BIGINT, ForeignKey(Auto.id), nullable=False)
     active = Column(BOOLEAN, nullable=False, default=True)
+    auto_id = Column(BIGINT, ForeignKey(Auto.id), nullable=False)
 
     spec = relationship(Spec, back_populates="requests")
     auto = relationship(Auto, back_populates="requests")
@@ -152,3 +153,13 @@ class Offer(DeclarativeBase):  # type: ignore[valid-type, misc]
 
     request = relationship(Request, back_populates="offers")
     ars = relationship(Ars, back_populates="offers")
+
+
+class Occupation(DeclarativeBase):  # type: ignore[valid-type, misc]
+    __tablename__ = "occupation"
+
+    id = Column(BIGINT, autoincrement=True, primary_key=True)
+    time = Column(TIMESTAMP, nullable=False)
+    ars_id = Column(BIGINT, ForeignKey(Ars.id), nullable=False)
+
+    ars = relationship(Ars, back_populates="occupations")
