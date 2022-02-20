@@ -1203,17 +1203,23 @@ OCCUPATIONS_TIME_ID = "occupations_time"
 
 
 def occupations_time_show(user_id, state_args):
+    current_date = date.fromisoformat(state_args["date"])
+    occupation_time_times_list = []
     with Session(engine["value"]) as session:
         for occupation in session.get(User, user_id).ars.occupations:
-            import sys
-            print(str(type(occupation.time)), file=sys.stderr)
+            occupation_time = occupation.time
+            if occupation_time.date() == current_date:
+                occupation_time_times_list.append(occupation_time.time())
     render_times = []
     for i in range(4):
         render_times_row = []
         for j in range(3):
-            str_time = time(9 + i + j * 4).isoformat()
+            current_time = time(9 + i + j * 4)
+            str_time = current_time.isoformat()
             render_times_row.append({
-                "text": str_time,
+                "text":
+                f"⭕ {str_time}"
+                if current_time in occupation_time_times_list else str_time,
                 "callback": {
                     "state_id": OCCUPATIONS_TIME_ID,
                     "handler_arg": str_time,
@@ -1238,10 +1244,16 @@ def occupations_time_callback(user_id, state_args, state_id, handler_arg):
     if state_id == OCCUPATIONS_DATE_ID:
         del state_args["date"]
         return
+    current_datetime = datetime.combine(date.fromisoformat(state_args["date"]),
+                                        time.fromisoformat(handler_arg))
     with Session(engine["value"]) as session:
-        session.add(
-            Occupation(time=datetime.combine(
-                date.fromisoformat(state_args["date"]),
-                time.fromisoformat(handler_arg)),
-                       ars_id=session.get(User, user_id).ars.id))
+        ars_id = session.get(User, user_id).ars.id
+        occupation = session.execute(
+            select(Occupation).where(
+                Occupation.time == current_datetime).where(
+                    Occupation.ars_id == ars_id)).scalars().first()
+        if occupation is None:
+            session.add(Occupation(time=current_datetime, ars_id=ars_id))
+        else:
+            session.delete(occupation)
         session.commit()
