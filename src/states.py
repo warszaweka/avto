@@ -1247,13 +1247,11 @@ def occupations_time_callback(user_id, state_args, state_id, handler_arg):
     current_datetime = datetime.combine(date.fromisoformat(state_args["date"]),
                                         time.fromisoformat(handler_arg))
     with Session(engine["value"]) as session:
-        ars_id = session.get(User, user_id).ars.id
-        occupation = session.execute(
-            select(Occupation).where(
-                Occupation.time == current_datetime).where(
-                    Occupation.ars_id == ars_id)).scalars().first()
-        if occupation is None:
-            session.add(Occupation(time=current_datetime, ars_id=ars_id))
+        ars = session.get(User, user_id).ars
+        for occupation in ars.occupations:
+            if occupation.time == current_datetime:
+                session.delete(occupation)
+                break
         else:
-            session.delete(occupation)
+            session.add(Occupation(time=current_datetime, ars_id=ars.id))
         session.commit()
