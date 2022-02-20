@@ -1203,6 +1203,10 @@ OCCUPATIONS_TIME_ID = "occupations_time"
 
 
 def occupations_time_show(user_id, state_args):
+    with Session(engine["value"]) as session:
+        for occupation in session.get(User, user_id).ars.occupations:
+            import sys
+            print(str(type(occupation.time)), file=sys.stderr)
     render_times = []
     for i in range(4):
         render_times_row = []
