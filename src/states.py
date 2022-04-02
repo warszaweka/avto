@@ -69,34 +69,34 @@ def client_show(user_id, state_args):
             fuel = auto.fuel
             volume = auto.volume
     render_button_change_auto_vendor = {
-        "text": "🚗 Изменить авто",
+        "text": "🚗 Змінити авто",
         "callback": CHANGE_AUTO_VENDOR_ID,
     }
     render_button_support = {
-        "text": "📞 Поддержка",
+        "text": "📞 Підтримка",
         "url": "tg://user?id=547862853",
     }
     return {
         "text":
-        "Главное меню навигации Автопилота.\nВвод новых заявок и контроль уж" +
-        "е поданных происходит отсюда." +
+        "Головне меню навігації Автопілота.\nВведення нових заявок та контро" +
+        "ль вже поданих відбувається звідси." +
         (f"\nВаше авто:\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
          FUEL_TEXT_MAP[fuel] if vendor_title is not None else ""),
         "keyboard": [
             [
                 render_button_change_auto_vendor,
                 {
-                    "text": "📝 Новая заявка",
+                    "text": "📝 Нова заявка",
                     "callback": CREATE_REQUEST_SPEC_ID,
                 },
             ],
             [
                 {
-                    "text": "📄 Заявки в работе",
+                    "text": "📄 Заявки у роботі",
                     "callback": CLIENT_REQUESTS_ID,
                 },
                 {
-                    "text": "📒 Акцепты",
+                    "text": "📒 Акцепти",
                     "callback": CLIENT_WINS_ID,
                 },
             ],
@@ -150,14 +150,14 @@ def change_auto_vendor_show(user_id, state_args):
         } for search_result in process.extract(search, vendors_dict, limit=9)]
     return {
         "text":
-        "Выберите марку авто или введите вручную",
+        "Введення нових заявок та контроль вже поданих відбувається звідси.",
         "photo":
         "AgACAgIAAxkBAAMDYhD08GYEgB-QOQABOg0i_4jZHdh2AAI7uzEbppeJSBpyNfdzkIR" +
         "jAQADAgADbQADIwQ",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -208,14 +208,14 @@ def change_auto_year_show(user_id, state_args):
         render_years.append(render_years_row)
     return {
         "text":
-        "Выберите год выпуска Вашего авто или введите вручную",
+        "Виберіть рік випуску Вашого авто або введіть вручну",
         "photo":
         "AgACAgIAAxkBAAMEYhD1RR5D2zDHR3xjrWAguMcr1AcAAjy7MRuml4lI7rxRFjBqx10" +
         "BAAMCAANzAAMjBA",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -238,7 +238,7 @@ def change_auto_year_text(user_id, state_args, handler_arg):
         return CHANGE_AUTO_YEAR_ID
     today_year = date.today().year
     if handler_arg < 1900 or handler_arg > today_year:
-        state_args["_status"] = f"Выходит за рамки [1900, {str(today_year)}]"
+        state_args["_status"] = f"Виходить за діапазон [1900, {str(today_year)}]"
         return CHANGE_AUTO_YEAR_ID
     state_args["year"] = str(handler_arg)
     return CHANGE_AUTO_FUEL_ID
@@ -250,14 +250,14 @@ CHANGE_AUTO_FUEL_ID = "change_auto_fuel"
 def change_auto_fuel_show(user_id, state_args):
     return {
         "text":
-        "Выберите вид топлива авто",
+        "Виберіть вид палива авто",
         "photo":
         "AgACAgIAAxkBAAMFYhD1p7zzfwlP9qg2jtpAJv5ppzoAAj27MRuml4lIfyniNP4sfnM" +
         "BAAMCAANtAAMjBA",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -287,7 +287,7 @@ CHANGE_AUTO_VOLUME_ID = "change_auto_volume"
 def change_auto_volume_show(user_id, state_args):
     return {
         "text":
-        "Введите объем двигателя Вашего авто в литрах, через точку. Пример: " +
+        "Введіть обсяг двигуна Вашого авто у літрах через точку. Приклад:" +
         " 1.2",
         "photo":
         "AgACAgIAAxkBAAMGYhD16IV61M6ZYIXzexMhDGFOeCAAAj67MRuml4lIA9oJSWsxvSk" +
@@ -295,7 +295,7 @@ def change_auto_volume_show(user_id, state_args):
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -316,7 +316,7 @@ def change_auto_volume_text(user_id, state_args, handler_arg):
         state_args["_status"] = "Не число"
         return CHANGE_AUTO_VOLUME_ID
     if handler_arg < 0 or handler_arg > 10:
-        state_args["_status"] = "Выходит за рамки [0, 10]"
+        state_args["_status"] = "Виходить за діапазон [0, 10]"
         return CHANGE_AUTO_VOLUME_ID
     fuel = state_args["fuel"]
     del state_args["fuel"]
@@ -353,13 +353,12 @@ def create_request_spec_show(user_id, state_args):
         } for spec in session.query(Spec).all()]
     return {
         "text":
-        "Укажите какие услуги СТО вам необходимы и двигаемся далее. Если ест" +
-        "ь сомнения, в следующем окне вы сможете описать техническую проблем" +
-        "у.",
+        "Вкажіть, які послуги СТО вам необхідні та рухаємося далі. Якщо є су" +
+        "мніви, у наступному вікні ви зможете описати технічну проблему.",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -386,14 +385,13 @@ CREATE_REQUEST_DESCRIPTION_ID = "create_request_description"
 def create_request_description_show(user_id, state_args):
     return {
         "text":
-        "Если вы хотите добавить описание или комментарий к ремонту," +
-        " то это можно сделать сейчас. Это необязательное для заполнения пол" +
-        "е, но любая дополнительная информация поможет нашим специалистам в " +
-        "решении проблемы.",
+        "Якщо ви хочете додати опис або коментар до ремонту, це можна зробит" +
+        "и зараз. Це необов'язкове для заповнення поле, але будь-яка додатко" +
+        "ва інформація допоможе нашим фахівцям у вирішенні проблеми.",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": CLIENT_ID,
                 },
             ],
@@ -408,7 +406,7 @@ def create_request_description_callback(user_id, state_args, state_id,
 
 def create_request_description_text(user_id, state_args, handler_arg):
     if len(handler_arg) > DESCRIPTION_LENGTH:
-        state_args["_status"] = "Слишком длинный"
+        state_args["_status"] = "Занадто довгий"
         return CREATE_REQUEST_DESCRIPTION_ID
     spec_id = state_args["spec_id"]
     del state_args["spec_id"]
@@ -435,12 +433,12 @@ def client_requests_show(user_id, state_args):
                          if request.active]
     return {
         "text":
-        "Заявки на рассмотрении. Все просто.\nПо каждой заявке Вы получите н" +
-        "есколько предложений от СТО. Все предложения действительны 15 минут" +
-        ", поэтому желательно уложиться с выбором в этот промежуток времени." +
-        "\nЛучшее из предложений Вы акцептуете и в предложенное время направ" +
-        "ляетесь на СТО для ремонта.\nДетально вы можете видеть статус и пер" +
-        "ейти к конкретной заявке для ее подтверждения.",
+        "Заявки на розгляд. Все просто.\nПо кожній заявці Ви отримаєте кільк" +
+        "а пропозицій від СТО. Всі пропозиції дійсні 15 хвилин, тому бажано " +
+        "вкластися з вибором у цей проміжок часу.\nНайкраща з пропозицій Ви " +
+        "акцептуєте та у запропонований час прямуєте на СТО для ремонту.\nДе" +
+        "тально ви можете бачити статус та перейти до конкретної заявки для " +
+        "її підтвердження.",
         "keyboard": [
             [
                 {
@@ -516,9 +514,9 @@ def client_request_show(user_id, state_args):
         ])
     return {
         "text":
-        f"Ваш автомобиль: {vendor_title}, {str(year)}, {str(volume)}, " +
-        f"{FUEL_TEXT_MAP[fuel]}.\nОтправлена заявка на следующие услуги ремо" +
-        f"нта: {spec_title}.\nКомментарий: {description}.",
+        f"Ваше авто: {vendor_title}, {str(year)}, {str(volume)}, " +
+        f"{FUEL_TEXT_MAP[fuel]}.\nНадіслано заявку на наступні послуги ремон" +
+        f"ту: {spec_title}.\nКоментар: {description}.",
         "keyboard": [
             [
                 {
@@ -526,7 +524,7 @@ def client_request_show(user_id, state_args):
                     "callback": CLIENT_REQUESTS_ID,
                 },
                 {
-                    "text": "🗑 Удалить заявку",
+                    "text": "🗑 Видалити заявку",
                     "callback": {
                         "state_id": CLIENT_REQUESTS_ID,
                         "handler_arg": "delete",
@@ -535,8 +533,8 @@ def client_request_show(user_id, state_args):
             ],
         ] + render_offers,
         "geo": {
-            "text": "Геопозиция",
-            "button": "📍 Геопозиция",
+            "text": "Геопозиція",
+            "button": "📍 Геопозиція",
         },
     }
 
@@ -588,7 +586,7 @@ def client_offer_show(user_id, state_args):
                     "callback": CLIENT_REQUEST_ID,
                 },
                 {
-                    "text": "✓ Выбрать",
+                    "text": "✓ Обрати",
                     "callback": CLIENT_WIN_ID,
                 },
             ],
@@ -633,7 +631,7 @@ def client_wins_show(user_id, state_args):
             })
     return {
         "text":
-        "Акцепты",
+        "Акцепти",
         "keyboard": [
             [
                 {
@@ -712,25 +710,25 @@ def diller_show(user_id, state_args):
         spec_titles_list = [spec.title for spec in ars.specs]
     render_message = {
         "text":
-        f"Диллер\n\n{title}\n{description}\n" + " ".join(spec_titles_list),
+        f"Дилер\n\n{title}\n{description}\n" + " ".join(spec_titles_list),
         "keyboard": [
             [
                 {
-                    "text": "✍ Изменить название",
+                    "text": "✍ Змінити назву",
                     "callback": CHANGE_ARS_TITLE_ID,
                 },
                 {
-                    "text": "✍ Изменить описание",
+                    "text": "✍ Змінити опис",
                     "callback": CHANGE_ARS_DESCRIPTION_ID,
                 },
             ],
             [
                 {
-                    "text": "✍ Изменить изображение",
+                    "text": "✍ Змінити зображення",
                     "callback": CHANGE_ARS_PICTURE_ID,
                 },
                 {
-                    "text": "✍ Изменить специализации",
+                    "text": "✍ Змінити спеціалізація",
                     "callback": CHANGE_ARS_SPECS_ID,
                 },
             ],
@@ -740,13 +738,13 @@ def diller_show(user_id, state_args):
                     "callback": DILLER_REQUESTS_ID,
                 },
                 {
-                    "text": "📒 Акцепты",
+                    "text": "📒 Акцепти",
                     "callback": DILLER_WINNERS_ID,
                 },
             ],
             [
                 {
-                    "text": "📅 Планировщик",
+                    "text": "📅 Планувальник",
                     "callback": OCCUPATIONS_DATE_ID,
                 },
             ],
@@ -771,11 +769,11 @@ CHANGE_ARS_TITLE_ID = "change_ars_title"
 
 def change_ars_title_show(user_id, state_args):
     return {
-        "text": "Введите название",
+        "text": "Введіть назву",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": DILLER_ID,
                 },
             ],
@@ -785,7 +783,7 @@ def change_ars_title_show(user_id, state_args):
 
 def change_ars_title_text(user_id, state_args, handler_arg):
     if len(handler_arg) > ARS_TITLE_LENGTH:
-        state_args["_status"] = "Слишком длинный"
+        state_args["_status"] = "Занадто довгий"
         return CHANGE_ARS_TITLE_ID
     with Session(engine["value"]) as session:
         session.get(User, user_id).ars.title = handler_arg
@@ -798,11 +796,11 @@ CHANGE_ARS_DESCRIPTION_ID = "change_ars_description"
 
 def change_ars_description_show(user_id, state_args):
     return {
-        "text": "Введите описание",
+        "text": "Введіть опис",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": DILLER_ID,
                 },
             ],
@@ -812,7 +810,7 @@ def change_ars_description_show(user_id, state_args):
 
 def change_ars_description_text(user_id, state_args, handler_arg):
     if len(handler_arg) > DESCRIPTION_LENGTH:
-        state_args["_status"] = "Слишком длинный"
+        state_args["_status"] = "Занадто довгий"
         return CHANGE_ARS_DESCRIPTION_ID
     with Session(engine["value"]) as session:
         session.get(User, user_id).ars.description = handler_arg
@@ -825,11 +823,11 @@ CHANGE_ARS_PICTURE_ID = "change_ars_picture"
 
 def change_ars_picture_show(user_id, state_args):
     return {
-        "text": "Отправьте фотографию",
+        "text": "Надішліть фотографію",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": DILLER_ID,
                 },
             ],
@@ -863,7 +861,7 @@ def change_ars_specs_show(user_id, state_args):
                 spec_titles_list.append(spec_title)
     return {
         "text":
-        "Выберите специализацию\n\n" + " ".join(spec_titles_list),
+        "Виберіть спеціалізацію\n\n" + " ".join(spec_titles_list),
         "keyboard": [
             [
                 {
@@ -970,7 +968,7 @@ def diller_request_show(user_id, state_args):
                     "callback": DILLER_REQUESTS_ID,
                 },
                 {
-                    "text": "📝 Создать оффер",
+                    "text": "📝 Створити оффер",
                     "callback": CREATE_OFFER_COST_ID,
                 },
             ],
@@ -990,11 +988,11 @@ CREATE_OFFER_COST_ID = "create_offer_cost"
 def create_offer_cost_show(user_id, state_args):
     return {
         "text":
-        "Введите цену или ценовой диапазон",
+        "Введіть ціну або ціновий діапазон",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": DILLER_REQUEST_ID,
                 },
             ],
@@ -1011,7 +1009,7 @@ def create_offer_cost_text(user_id, state_args, handler_arg):
     splitted = handler_arg.split("-")
     len_splitted = len(splitted)
     if len_splitted > 2:
-        state_args["_status"] = "Неверный формат"
+        state_args["_status"] = "Невірний формат"
         return CREATE_OFFER_COST_ID
     try:
         cost_floor = int(splitted[0])
@@ -1019,7 +1017,7 @@ def create_offer_cost_text(user_id, state_args, handler_arg):
         state_args["_status"] = "cost_floor не число"
         return CREATE_OFFER_COST_ID
     if not 0 < cost_floor < 1000000:
-        state_args["_status"] = "cost_floor выходит за диапазон [1, 999999]"
+        state_args["_status"] = "cost_floor виходить за діапазон [1, 999999]"
         return CREATE_OFFER_COST_ID
     cost_ceil = None
     if len_splitted == 2:
@@ -1029,7 +1027,7 @@ def create_offer_cost_text(user_id, state_args, handler_arg):
             state_args["_status"] = "cost_ceil не число"
             return CREATE_OFFER_COST_ID
         if not cost_floor < cost_ceil < 1000000:
-            state_args["_status"] = "cost_ceil выходит за диапазон [cost_fl" +\
+            state_args["_status"] = "cost_ceil виходить за діапазон [cost_fl" +\
                 "oor + 1, 999999]"
             return CREATE_OFFER_COST_ID
     state_args["cost_floor"] = cost_floor
@@ -1044,11 +1042,11 @@ CREATE_OFFER_DESCRIPTION_ID = "create_offer_description"
 def create_offer_description_show(user_id, state_args):
     return {
         "text":
-        "Введите описание",
+        "Введіть опис",
         "keyboard": [
             [
                 {
-                    "text": "❌ Отменить",
+                    "text": "❌ Відмінити",
                     "callback": DILLER_REQUEST_ID,
                 },
             ],
@@ -1067,7 +1065,7 @@ def create_offer_description_callback(user_id, state_args, state_id,
 
 def create_offer_description_text(user_id, state_args, handler_arg):
     if len(handler_arg) > DESCRIPTION_LENGTH:
-        state_args["_status"] = "Слишком длинный"
+        state_args["_status"] = "Занадто довгий"
         return CREATE_OFFER_DESCRIPTION_ID
     cost_floor = state_args["cost_floor"]
     del state_args["cost_floor"]
@@ -1099,7 +1097,7 @@ def diller_winners_show(user_id, state_args):
         } for offer in session.get(User, user_id).ars.offers if offer.winner]
     return {
         "text":
-        "Акцепты",
+        "Акцепти",
         "keyboard": [
             [
                 {
@@ -1182,7 +1180,7 @@ def occupations_date_show(user_id, state_args):
         ])
     return {
         "text":
-        "Запланировать дату и время ремонтных работ",
+        "Запланувати дату та час ремонтних робіт",
         "keyboard": [
             [
                 {
@@ -1228,7 +1226,7 @@ def occupations_time_show(user_id, state_args):
         render_times.append(render_times_row)
     return {
         "text":
-        "Запланировать дату и время ремонтных работ",
+        "Запланувати дату та час ремонтних робіт",
         "keyboard": [
             [
                 {
