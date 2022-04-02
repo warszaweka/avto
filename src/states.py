@@ -728,7 +728,7 @@ def diller_show(user_id, state_args):
                     "callback": CHANGE_ARS_PICTURE_ID,
                 },
                 {
-                    "text": "✍ Змінити спеціалізація",
+                    "text": "✍ Змінити спеціалізацію",
                     "callback": CHANGE_ARS_SPECS_ID,
                 },
             ],
