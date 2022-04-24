@@ -238,7 +238,8 @@ def change_auto_year_text(user_id, state_args, handler_arg):
         return CHANGE_AUTO_YEAR_ID
     today_year = date.today().year
     if handler_arg < 1900 or handler_arg > today_year:
-        state_args["_status"] = f"Виходить за діапазон [1900, {str(today_year)}]"
+        state_args["_status"] = "Виходить за діапазон [1900, " +\
+            f"{str(today_year)}]"
         return CHANGE_AUTO_YEAR_ID
     state_args["year"] = str(handler_arg)
     return CHANGE_AUTO_FUEL_ID
@@ -430,7 +431,7 @@ def client_requests_show(user_id, state_args):
             "id": request.id,
             "spec_title": request.spec.title,
         } for request in session.get(User, user_id).auto.requests
-                         if request.active]
+            if request.active]
     return {
         "text":
         "Заявки на розгляд. Все просто.\nПо кожній заявці Ви отримаєте кільк" +
@@ -1027,8 +1028,8 @@ def create_offer_cost_text(user_id, state_args, handler_arg):
             state_args["_status"] = "cost_ceil не число"
             return CREATE_OFFER_COST_ID
         if not cost_floor < cost_ceil < 1000000:
-            state_args["_status"] = "cost_ceil виходить за діапазон [cost_fl" +\
-                "oor + 1, 999999]"
+            state_args["_status"] = "cost_ceil виходить за діапазон [cost_f" +\
+                "loor + 1, 999999]"
             return CREATE_OFFER_COST_ID
     state_args["cost_floor"] = cost_floor
     if cost_ceil is not None:
