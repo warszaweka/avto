@@ -1,8 +1,2 @@
-/mypy.ini
-/pylsp-mypy.cfg
-/.flake8
-/.pydocstyle.ini
-/spec.sql
-/vendor.sql
-/.ropeproject/
 /.mypy_cache/
+/.ropeproject/

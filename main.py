@@ -2,29 +2,28 @@ from gevent.monkey import patch_all
 
 patch_all()
 
-from psycogreen.gevent import patch_psycopg
+from psycogreen.gevent import patch_psycopg  # noqa: E402
 
 patch_psycopg()
 
-from decimal import Decimal
-from os import getenv
-from re import compile as re_compile
-from re import sub
-from sys import stderr
-from typing import Dict
+from os import getenv  # noqa: E402
+from re import compile as re_compile  # noqa: E402
+from re import sub  # noqa: E402
+from sys import stderr  # noqa: E402
+from typing import Dict  # noqa: E402
 
-from flask import Flask, request
-from gevent import spawn
-from gevent.lock import BoundedSemaphore
-from requests import post
-from sqlalchemy import select
-from sqlalchemy.future import create_engine
-from sqlalchemy.orm import Session
+from flask import Flask, request  # noqa: E402
+from gevent import spawn  # noqa: E402
+from gevent.lock import BoundedSemaphore  # noqa: E402
+from requests import post  # noqa: E402
+from sqlalchemy import select  # noqa: E402
+from sqlalchemy.future import create_engine  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
 
-from src import states
-from src.models import Callback, DeclarativeBase, User
-from src.states import START_ID
-from src.states import engine as states_engine
+from src import states  # noqa: E402
+from src.models import Callback, DeclarativeBase, User  # noqa: E402
+from src.states import START_ID  # noqa: E402
+from src.states import engine as states_engine  # noqa: E402
 
 WP_ID = "AgACAgIAAxkBAAMCYhD0ezPu0APUdAJfDAhP491UCPcAAnS9MRvcWYhInPNDOCEatD" +\
     "oBAAMCAAN4AAMjBA"
