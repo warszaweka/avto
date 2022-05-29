@@ -324,4 +324,4 @@ def flask_handler():
     return ("", 204)
 
 
-flask.register_blueprint(admin, url_prefix=getenv("ADMIN_TOKEN", ""))
+flask.register_blueprint(admin, url_prefix="/" + getenv("ADMIN_TOKEN", ""))
