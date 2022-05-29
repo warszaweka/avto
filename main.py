@@ -21,6 +21,7 @@ from sqlalchemy.future import create_engine  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from src import states  # noqa: E402
+from src.admin import admin  # noqa: E402
 from src.models import Callback, DeclarativeBase, User  # noqa: E402
 from src.states import START_ID  # noqa: E402
 from src.states import engine as states_engine  # noqa: E402
@@ -321,3 +322,6 @@ flask = Flask(__name__)
 def flask_handler():
     spawn(tg_handler, request.json)
     return ("", 204)
+
+
+flask.register_blueprint(admin, url_prefix=getenv("ADMIN_TOKEN", ""))
