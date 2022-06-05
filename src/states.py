@@ -959,9 +959,15 @@ def diller_request_show(user_id, state_args):
         request = session.get(Request, request_id)
         spec_title = request.spec.title
         description = request.description
+        auto = request.auto
+        vendor_title = auto.vendor.title
+        year = auto.year
+        fuel = auto.fuel
+        volume = auto.volume
     return {
         "text":
-        f"Заявка\n\n{spec_title}\n{description}",
+        f"Заявка\n\n{spec_title}\n{description}" +
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
         "keyboard": [
             [
                 {
@@ -970,7 +976,7 @@ def diller_request_show(user_id, state_args):
                 },
                 {
                     "text": "📝 Створити оффер",
-                    "callback": CREATE_OFFER_COST_ID,
+                    "callback": CREATE_OFFER_OCCUPATION_DATE_ID,
                 },
             ],
         ],
@@ -978,18 +984,163 @@ def diller_request_show(user_id, state_args):
 
 
 def diller_request_callback(user_id, state_args, state_id, handler_arg):
-    if state_id == CREATE_OFFER_COST_ID:
+    if state_id == CREATE_OFFER_OCCUPATION_DATE_ID:
         state_args["request_id"] = state_args["id"]
     del state_args["id"]
+
+
+CREATE_OFFER_OCCUPATION_DATE_ID = "create_offer_occupation_date"
+
+
+def create_offer_occupation_date_show(user_id, state_args):
+    request_id = state_args["request_id"]
+    with Session(engine["value"]) as session:
+        request = session.get(Request, request_id)
+        auto = request.auto
+        vendor_title = auto.vendor.title
+        year = auto.year
+        fuel = auto.fuel
+        volume = auto.volume
+    today_date = date.today()
+    render_dates = []
+    for i in range(7):
+        str_date = (today_date + timedelta(days=i)).isoformat()
+        render_dates.append([
+            {
+                "text": str_date,
+                "callback": {
+                    "state_id": CREATE_OFFER_OCCUPATION_TIME_ID,
+                    "handler_arg": str_date,
+                },
+            },
+        ])
+    return {
+        "text":
+        "Запропонувати дату та час ремонтних робіт" +
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
+        "keyboard": [
+            [
+                {
+                    "text": "❌ Відмінити",
+                    "callback": DILLER_REQUEST_ID,
+                },
+            ],
+        ] + render_dates,
+    }
+
+
+def create_offer_occupation_date_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == DILLER_REQUEST_ID:
+        state_args["id"] = state_args["request_id"]
+        del state_args["request_id"]
+        return
+    state_args["date"] = handler_arg
+
+
+CREATE_OFFER_OCCUPATION_TIME_ID = "create_offer_occupation_time"
+
+
+def create_offer_occupation_time_show(user_id, state_args):
+    request_id = state_args["request_id"]
+    current_date = date.fromisoformat(state_args["date"])
+    occupation_time_times_list_wo_request = []
+    occupation_time_times_list_wo_winner = []
+    occupation_time_times_list_winner = []
+    with Session(engine["value"]) as session:
+        request = session.get(Request, request_id)
+        auto = request.auto
+        vendor_title = auto.vendor.title
+        year = auto.year
+        fuel = auto.fuel
+        volume = auto.volume
+        ars = session.get(User, user_id).ars
+        ars_id = ars.id
+        for occupation in ars.occupations:
+            occupation_time = occupation.time
+            if occupation_time.date() == current_date:
+                occupation_time_time = occupation_time.time()
+                request = occupation.request
+                if request is not None:
+                    for offer in request.offers:
+                        if offer.winner:
+                            if offer.ars_id == ars_id:
+                                occupation_time_times_list_winner.append(
+                                    occupation_time_time
+                                )
+                            break
+                    else:
+                        occupation_time_times_list_wo_winner.append(
+                            occupation_time_time
+                        )
+                else:
+                    occupation_time_times_list_wo_request.append(
+                        occupation_time_time
+                    )
+
+    render_times = []
+    for i in range(4):
+        render_times_row = []
+        for j in range(3):
+            current_time = time(9 + i + j * 4)
+            str_time = current_time.isoformat()
+            vacant = False
+            if current_time in occupation_time_times_list_wo_request:
+                mark = "⭕ "
+            elif current_time in occupation_time_times_list_wo_winner:
+                mark = "⏳ "
+            elif current_time in occupation_time_times_list_winner:
+                mark = "✅ "
+            else:
+                mark = ""
+                vacant = True
+            render_times_row.append({
+                "text": f"{mark}{str_time}",
+                "callback": {
+                    "state_id": CREATE_OFFER_COST_ID if vacant else CREATE_OFFER_OCCUPATION_TIME_ID,
+                    "handler_arg": str_time,
+                },
+            })
+        render_times.append(render_times_row)
+    return {
+        "text":
+        "Запропонувати дату та час ремонтних робіт" +
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
+        "keyboard": [
+            [
+                {
+                    "text": "❌ Відмінити",
+                    "callback": DILLER_REQUEST_ID,
+                },
+            ],
+        ] + render_times,
+    }
+
+
+def create_offer_occupation_time_callback(user_id, state_args, state_id, handler_arg):
+    if state_id == DILLER_REQUEST_ID:
+        state_args["id"] = state_args["request_id"]
+        del state_args["request_id"]
+        del state_args["date"]
+    elif state_id == CREATE_OFFER_COST_ID:
+        state_args["time"] = handler_arg
 
 
 CREATE_OFFER_COST_ID = "create_offer_cost"
 
 
 def create_offer_cost_show(user_id, state_args):
+    request_id = state_args["request_id"]
+    with Session(engine["value"]) as session:
+        request = session.get(Request, request_id)
+        auto = request.auto
+        vendor_title = auto.vendor.title
+        year = auto.year
+        fuel = auto.fuel
+        volume = auto.volume
     return {
         "text":
-        "Введіть ціну або ціновий діапазон",
+        "Введіть ціну або ціновий діапазон" +
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
         "keyboard": [
             [
                 {
@@ -1004,6 +1155,8 @@ def create_offer_cost_show(user_id, state_args):
 def create_offer_cost_callback(user_id, state_args, state_id, handler_arg):
     state_args["id"] = state_args["request_id"]
     del state_args["request_id"]
+    del state_args["date"]
+    del state_args["time"]
 
 
 def create_offer_cost_text(user_id, state_args, handler_arg):
@@ -1041,9 +1194,18 @@ CREATE_OFFER_DESCRIPTION_ID = "create_offer_description"
 
 
 def create_offer_description_show(user_id, state_args):
+    request_id = state_args["request_id"]
+    with Session(engine["value"]) as session:
+        request = session.get(Request, request_id)
+        auto = request.auto
+        vendor_title = auto.vendor.title
+        year = auto.year
+        fuel = auto.fuel
+        volume = auto.volume
     return {
         "text":
-        "Введіть опис",
+        "Введіть опис" +
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
         "keyboard": [
             [
                 {
@@ -1057,6 +1219,8 @@ def create_offer_description_show(user_id, state_args):
 
 def create_offer_description_callback(user_id, state_args, state_id,
                                       handler_arg):
+    del state_args["date"]
+    del state_args["time"]
     del state_args["cost_floor"]
     if "cost_ceil" in state_args:
         del state_args["cost_ceil"]
@@ -1076,10 +1240,16 @@ def create_offer_description_text(user_id, state_args, handler_arg):
         del state_args["cost_ceil"]
     request_id = state_args["request_id"]
     del state_args["request_id"]
+    current_datetime = datetime.combine(date.fromisoformat(state_args["date"]),
+                                        time.fromisoformat(state_args["time"]))
+    del state_args["date"]
+    del state_args["time"]
     with Session(engine["value"]) as session:
+        ars_id = session.get(User, user_id).ars.id
+        session.add(Occupation(time=current_datetime, ars_id=ars_id, request_id=request_id))
         session.add(
             Offer(request_id=request_id,
-                  ars_id=session.get(User, user_id).ars.id,
+                  ars_id=ars_id,
                   cost_floor=cost_floor,
                   cost_ceil=cost_ceil,
                   description=handler_arg))
@@ -1203,22 +1373,50 @@ OCCUPATIONS_TIME_ID = "occupations_time"
 
 def occupations_time_show(user_id, state_args):
     current_date = date.fromisoformat(state_args["date"])
-    occupation_time_times_list = []
+    occupation_time_times_list_wo_request = []
+    occupation_time_times_list_wo_winner = []
+    occupation_time_times_list_winner = []
     with Session(engine["value"]) as session:
-        for occupation in session.get(User, user_id).ars.occupations:
+        ars = session.get(User, user_id).ars
+        ars_id = ars.id
+        for occupation in ars.occupations:
             occupation_time = occupation.time
             if occupation_time.date() == current_date:
-                occupation_time_times_list.append(occupation_time.time())
+                occupation_time_time = occupation_time.time()
+                request = occupation.request
+                if request is not None:
+                    for offer in request.offers:
+                        if offer.winner:
+                            if offer.ars_id == ars_id:
+                                occupation_time_times_list_winner.append(
+                                    occupation_time_time
+                                )
+                            break
+                    else:
+                        occupation_time_times_list_wo_winner.append(
+                            occupation_time_time
+                        )
+                else:
+                    occupation_time_times_list_wo_request.append(
+                        occupation_time_time
+                    )
+
     render_times = []
     for i in range(4):
         render_times_row = []
         for j in range(3):
             current_time = time(9 + i + j * 4)
             str_time = current_time.isoformat()
+            if current_time in occupation_time_times_list_wo_request:
+                mark = "⭕ "
+            elif current_time in occupation_time_times_list_wo_winner:
+                mark = "⏳ "
+            elif current_time in occupation_time_times_list_winner:
+                mark = "✅ "
+            else:
+                mark = ""
             render_times_row.append({
-                "text":
-                f"⭕ {str_time}"
-                if current_time in occupation_time_times_list else str_time,
+                "text": f"{mark}{str_time}",
                 "callback": {
                     "state_id": OCCUPATIONS_TIME_ID,
                     "handler_arg": str_time,
@@ -1249,7 +1447,8 @@ def occupations_time_callback(user_id, state_args, state_id, handler_arg):
         ars = session.get(User, user_id).ars
         for occupation in ars.occupations:
             if occupation.time == current_datetime:
-                session.delete(occupation)
+                if occupation.request is None:
+                    session.delete(occupation)
                 break
         else:
             session.add(Occupation(time=current_datetime, ars_id=ars.id))

@@ -139,6 +139,7 @@ class Request(DeclarativeBase):  # type: ignore[valid-type, misc]
     spec = relationship(Spec, back_populates="requests")
     auto = relationship(Auto, back_populates="requests")
     offers = relationship("Offer", back_populates="request")
+    occupations = relationship("Occupation", back_populates="request")
 
 
 class Offer(DeclarativeBase):  # type: ignore[valid-type, misc]
@@ -161,5 +162,7 @@ class Occupation(DeclarativeBase):  # type: ignore[valid-type, misc]
     id = Column(BIGINT, autoincrement=True, primary_key=True)
     time = Column(TIMESTAMP, nullable=False)
     ars_id = Column(BIGINT, ForeignKey(Ars.id), nullable=False)
+    request_id = Column(BIGINT, ForeignKey(Request.id))
 
     ars = relationship(Ars, back_populates="occupations")
+    request = relationship(Request, back_populates="occupations")
