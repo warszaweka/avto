@@ -24,7 +24,7 @@ from sqlalchemy.future import create_engine  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from src import states  # noqa: E402
-from src.models import Callback, DeclarativeBase, User  # noqa: E402
+from src.models import Callback, DeclarativeBase, User, Spec, Vendor, Auto, Ars, Registration, Request, Offer, Occupation  # noqa: E402
 from src.states import START_ID  # noqa: E402
 from src.states import engine as states_engine  # noqa: E402
 
@@ -327,7 +327,16 @@ def flask_handler():
 
 
 flask.config["FLASK_ADMIN_SWATCH"] = "cerulean"
-
 admin = Admin(flask, index_view=AdminIndexView(url="/" + getenv("ADMIN_TOKEN", "")))
+admin_session = Session(engine)
 
-admin.add_view(ModelView(User, Session(engine)))
+admin.add_view(ModelView(Spec, admin_session))
+admin.add_view(ModelView(Vendor, admin_session))
+admin.add_view(ModelView(User, admin_session))
+admin.add_view(ModelView(Callback, admin_session))
+admin.add_view(ModelView(Auto, admin_session))
+admin.add_view(ModelView(Ars, admin_session))
+admin.add_view(ModelView(Registration, admin_session))
+admin.add_view(ModelView(Request, admin_session))
+admin.add_view(ModelView(Offer, admin_session))
+admin.add_view(ModelView(Occupation, admin_session))
