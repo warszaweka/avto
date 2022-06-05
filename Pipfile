@@ -14,6 +14,7 @@ requests = "*"
 fuzzywuzzy = "*"
 python-levenshtein = "*"
 geopy = "*"
+flask-admin = "*"
 
 [requires]
 python_version = "3.10"

@@ -13,6 +13,9 @@ from sys import stderr  # noqa: E402
 from typing import Dict  # noqa: E402
 
 from flask import Flask, request  # noqa: E402
+from flask_admin import Admin  # noqa: E402
+from flask_admin.base import AdminIndexView  # noqa: E402
+from flask_admin.contrib.sqla import ModelView  # noqa: E402
 from gevent import spawn  # noqa: E402
 from gevent.lock import BoundedSemaphore  # noqa: E402
 from requests import post  # noqa: E402
@@ -21,7 +24,6 @@ from sqlalchemy.future import create_engine  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from src import states  # noqa: E402
-from src.admin import admin  # noqa: E402
 from src.models import Callback, DeclarativeBase, User  # noqa: E402
 from src.states import START_ID  # noqa: E402
 from src.states import engine as states_engine  # noqa: E402
@@ -324,4 +326,8 @@ def flask_handler():
     return ("", 204)
 
 
-flask.register_blueprint(admin, url_prefix="/" + getenv("ADMIN_TOKEN", ""))
+flask.config["FLASK_ADMIN_SWATCH"] = "cerulean"
+
+admin = Admin(flask, index_view=AdminIndexView(url="/" + getenv("ADMIN_TOKEN", "")))
+
+admin.add_view(ModelView(User, Session(engine)))
