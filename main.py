@@ -326,6 +326,8 @@ def flask_handler():
     return ("", 204)
 
 
+flask.secret_key = getenv("SECRET_KEY")
+
 flask.config["FLASK_ADMIN_SWATCH"] = "cerulean"
 admin = Admin(flask, index_view=AdminIndexView(url="/" + getenv("ADMIN_TOKEN", "")))
 admin_session = Session(engine)
