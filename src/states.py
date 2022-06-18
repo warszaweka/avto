@@ -618,7 +618,7 @@ def client_offer_show(user_id, state_args):
         f"Пропозиція від СТО:\nПриблизна вартість робіт {str(cost_floor)}" +
         (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
         f" грн.\nЗапланований час візиту - " +
-        occupation_time.strftime("%d %B %H:00") +
+        occupation_time.strftime("%d-%m %H:00") +
         f"\nКоментар: {description}",
         "keyboard": [
             [
@@ -727,7 +727,7 @@ def client_win_show(user_id, state_args):
     render_message = {
         "text":
         f"Ви прийняли пропозицію від {title}.\n{ars_description}" +
-        f"\nМи чекаємо вас {occupation_time.strftime('%d %B о %H:00')}" +
+        f"\nМи чекаємо вас {occupation_time.strftime('%d-%m о %H:00')}" +
         f" за адресою:\n{address}\nТел. {phone}" +
         f"\nПриблизна вартість робіт складе {str(cost_floor)}" +
         (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
