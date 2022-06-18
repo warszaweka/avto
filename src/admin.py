@@ -129,7 +129,6 @@ class RegistrationModelView(CommonModelView):
         'id',
         'phone',
     ]
-    column_default_sort = 'id'
 
 
 class RequestModelView(CommonModelView):
