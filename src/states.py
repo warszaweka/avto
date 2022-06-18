@@ -543,10 +543,10 @@ def client_request_show(user_id, state_args):
         render_offers.append([
             {
                 "text":
-                f"Пропозиція {index + 1}. Приблизна вартість " +
+                f"Пропозиція {index + 1}. " +
                 str(offer_dict["cost_floor"]) +
                 (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
-                f" грн.\nЧас ремонту - {offer_dict['time'].isoformat()}." +
+                f" грн. {offer_dict['time'].isoformat()}." +
                 (" " + str(
                     ceil(
                         distance((latitude, longitude),
