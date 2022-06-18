@@ -546,7 +546,7 @@ def client_request_show(user_id, state_args):
                 f"Пропозиція {index + 1}. " +
                 str(offer_dict["cost_floor"]) +
                 (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
-                f" грн. {offer_dict['time'].isoformat()}." +
+                f" грн. {offer_dict['time'].strftime('%d-%m %H:00')}." +
                 (" " + str(
                     ceil(
                         distance((latitude, longitude),
