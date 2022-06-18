@@ -967,7 +967,8 @@ def diller_request_show(user_id, state_args):
     return {
         "text":
         f"Заявка\n\n{spec_title}\n{description}" +
-        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
+        FUEL_TEXT_MAP[fuel],
         "keyboard": [
             [
                 {
@@ -1017,7 +1018,8 @@ def create_offer_occupation_date_show(user_id, state_args):
     return {
         "text":
         "Запропонувати дату та час ремонтних робіт" +
-        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
+        FUEL_TEXT_MAP[fuel],
         "keyboard": [
             [
                 {
@@ -1029,7 +1031,12 @@ def create_offer_occupation_date_show(user_id, state_args):
     }
 
 
-def create_offer_occupation_date_callback(user_id, state_args, state_id, handler_arg):
+def create_offer_occupation_date_callback(
+    user_id,
+    state_args,
+    state_id,
+    handler_arg,
+):
     if state_id == DILLER_REQUEST_ID:
         state_args["id"] = state_args["request_id"]
         del state_args["request_id"]
@@ -1096,7 +1103,11 @@ def create_offer_occupation_time_show(user_id, state_args):
             render_times_row.append({
                 "text": f"{mark}{str_time}",
                 "callback": {
-                    "state_id": CREATE_OFFER_COST_ID if vacant else CREATE_OFFER_OCCUPATION_TIME_ID,
+                    "state_id": (
+                        CREATE_OFFER_COST_ID
+                        if vacant
+                        else CREATE_OFFER_OCCUPATION_TIME_ID
+                    ),
                     "handler_arg": str_time,
                 },
             })
@@ -1104,7 +1115,8 @@ def create_offer_occupation_time_show(user_id, state_args):
     return {
         "text":
         "Запропонувати дату та час ремонтних робіт" +
-        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
+        FUEL_TEXT_MAP[fuel],
         "keyboard": [
             [
                 {
@@ -1116,7 +1128,12 @@ def create_offer_occupation_time_show(user_id, state_args):
     }
 
 
-def create_offer_occupation_time_callback(user_id, state_args, state_id, handler_arg):
+def create_offer_occupation_time_callback(
+    user_id,
+    state_args,
+    state_id,
+    handler_arg,
+):
     if state_id == DILLER_REQUEST_ID:
         state_args["id"] = state_args["request_id"]
         del state_args["request_id"]
@@ -1140,7 +1157,8 @@ def create_offer_cost_show(user_id, state_args):
     return {
         "text":
         "Введіть ціну або ціновий діапазон" +
-        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
+        FUEL_TEXT_MAP[fuel],
         "keyboard": [
             [
                 {
@@ -1205,7 +1223,8 @@ def create_offer_description_show(user_id, state_args):
     return {
         "text":
         "Введіть опис" +
-        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., {FUEL_TEXT_MAP[fuel]}",
+        f"\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
+        FUEL_TEXT_MAP[fuel],
         "keyboard": [
             [
                 {
@@ -1246,7 +1265,11 @@ def create_offer_description_text(user_id, state_args, handler_arg):
     del state_args["time"]
     with Session(engine["value"]) as session:
         ars_id = session.get(User, user_id).ars.id
-        session.add(Occupation(time=current_datetime, ars_id=ars_id, request_id=request_id))
+        session.add(Occupation(
+            time=current_datetime,
+            ars_id=ars_id,
+            request_id=request_id,
+        ))
         session.add(
             Offer(request_id=request_id,
                   ars_id=ars_id,
