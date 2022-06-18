@@ -69,7 +69,7 @@ def client_show(user_id, state_args):
             fuel = auto.fuel
             volume = auto.volume
     render_button_change_geo = {
-        "text": "📍 Змінити геопозицію",
+        "text": "📍 Оновити геолокацію",
         "callback": CHANGE_GEO_ID,
     }
     render_button_change_auto_vendor = {
@@ -598,8 +598,9 @@ CLIENT_OFFER_ID = "client_offer"
 
 
 def client_offer_show(user_id, state_args):
+    request_id = state_args["request_id"]
     offer_id = {
-        "request_id": state_args["request_id"],
+        "request_id": request_id,
         "ars_id": state_args["ars_id"],
     }
     with Session(engine["value"]) as session:
@@ -607,11 +608,18 @@ def client_offer_show(user_id, state_args):
         cost_floor = offer.cost_floor
         cost_ceil = offer.cost_ceil
         description = offer.description
+        occupation_time = session.execute(
+            select(Occupation)
+            .where(Occupation.ars_id == offer.ars_id)
+            .where(Occupation.request_id == request_id)
+        ).scalars().first().time
     return {
         "text":
-        f"Оффер\n\n{str(cost_floor)}" +
+        f"Пропозиція від СТО:\nПриблизна вартість робіт {str(cost_floor)}" +
         (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
-        f"\n{description}",
+        f" грн.\nЗапланований час візиту - " +
+        occupation_time.strftime("%d %B %H:00") +
+        f"\nКоментар: {description}",
         "keyboard": [
             [
                 {
@@ -703,21 +711,39 @@ def client_win_show(user_id, state_args):
                 cost_ceil = offer.cost_ceil
                 description = offer.description
                 ars = offer.ars
+                phone = ars.user.phone
                 title = ars.title
+                latitude = ars.latitude
+                longitude = ars.longitude
                 ars_description = ars.description
                 address = ars.address
                 picture = ars.picture
+                occupation_time = session.execute(
+                    select(Occupation)
+                    .where(Occupation.ars_id == ars.id)
+                    .where(Occupation.request_id == request_id)
+                ).scalars().first().time
                 break
     render_message = {
         "text":
-        f"Акцепт\n\n{spec_title}\n{str(cost_floor)}" +
+        f"Ви прийняли пропозицію від {title}.\n{ars_description}" +
+        f"\nМи чекаємо вас {occupation_time.strftime('%d %B о %H:00')}" +
+        f" за адресою:\n{address}\nТел. {phone}" +
+        f"\nПриблизна вартість робіт складе {str(cost_floor)}" +
         (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
-        f"\n{description}\n{title}\n{ars_description}\n{address}",
+        f"\nКоментар: {description}",
         "keyboard": [
             [
                 {
                     "text": "🔙 Назад",
                     "callback": CLIENT_WINS_ID,
+                },
+            ],
+            [
+                {
+                    "text": "📍 Місцезнаходження",
+                    "url": "https://www.google.com/maps/place/" +
+                    f"{latitude},{longitude}",
                 },
             ],
         ],

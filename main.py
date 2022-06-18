@@ -6,6 +6,7 @@ from psycogreen.gevent import patch_psycopg  # noqa: E402
 
 patch_psycopg()
 
+from locale import setlocale, LC_ALL  # noqa: E402
 from os import getenv  # noqa: E402
 from re import compile as re_compile  # noqa: E402
 from re import sub  # noqa: E402
@@ -25,6 +26,8 @@ from src.admin import setup_admin  # noqa: E402
 from src.models import Callback, DeclarativeBase, User  # noqa: E402
 from src.states import START_ID  # noqa: E402
 from src.states import engine as states_engine  # noqa: E402
+
+setlocale(LC_ALL, "uk_UA")
 
 WP_ID = "AgACAgIAAxkBAAMCYhD0ezPu0APUdAJfDAhP491UCPcAAnS9MRvcWYhInPNDOCEatD" +\
     "oBAAMCAAN4AAMjBA"
