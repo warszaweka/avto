@@ -39,6 +39,9 @@ class Spec(DeclarativeBase):  # type: ignore[valid-type, misc]
     requests = relationship("Request", back_populates="spec")
     arses = relationship("Ars", secondary=ars_spec, back_populates="specs")
 
+    def __str__(self):
+        return self.title
+
 
 class Vendor(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "vendor"
@@ -47,6 +50,9 @@ class Vendor(DeclarativeBase):  # type: ignore[valid-type, misc]
     title = Column(VARCHAR(VENDOR_TITLE_LENGTH), nullable=False, unique=True)
 
     autos = relationship("Auto", back_populates="vendor")
+
+    def __str__(self):
+        return self.title
 
 
 class User(DeclarativeBase):  # type: ignore[valid-type, misc]
@@ -65,6 +71,9 @@ class User(DeclarativeBase):  # type: ignore[valid-type, misc]
     auto = relationship("Auto", back_populates="user", uselist=False)
     ars = relationship("Ars", back_populates="user", uselist=False)
 
+    def __str__(self):
+        return self.phone
+
 
 class Callback(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "callback"
@@ -76,6 +85,9 @@ class Callback(DeclarativeBase):  # type: ignore[valid-type, misc]
                      nullable=False)
 
     user = relationship(User, back_populates="callbacks")
+
+    def __str__(self):
+        return f"{self.user}/{self.data}"
 
 
 class Auto(DeclarativeBase):  # type: ignore[valid-type, misc]
@@ -93,6 +105,9 @@ class Auto(DeclarativeBase):  # type: ignore[valid-type, misc]
     vendor = relationship(Vendor, back_populates="autos")
     user = relationship(User, back_populates="auto")
     requests = relationship("Request", back_populates="auto")
+
+    def __str__(self):
+        return str(self.user)
 
 
 class Ars(DeclarativeBase):  # type: ignore[valid-type, misc]
@@ -117,6 +132,9 @@ class Ars(DeclarativeBase):  # type: ignore[valid-type, misc]
                                 uselist=False)
     occupations = relationship("Occupation", back_populates="ars")
 
+    def __str__(self):
+        return self.title
+
 
 class Registration(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "registration"
@@ -125,6 +143,9 @@ class Registration(DeclarativeBase):  # type: ignore[valid-type, misc]
     phone = Column(VARCHAR(PHONE_LENGTH), nullable=False, unique=True)
 
     ars = relationship(Ars, back_populates="registration")
+
+    def __str__(self):
+        return self.phone
 
 
 class Request(DeclarativeBase):  # type: ignore[valid-type, misc]
@@ -141,6 +162,9 @@ class Request(DeclarativeBase):  # type: ignore[valid-type, misc]
     offers = relationship("Offer", back_populates="request")
     occupations = relationship("Occupation", back_populates="request")
 
+    def __str__(self):
+        return f"{self.auto}/{self.spec}/{self.active}"
+
 
 class Offer(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "offer"
@@ -155,6 +179,9 @@ class Offer(DeclarativeBase):  # type: ignore[valid-type, misc]
     request = relationship(Request, back_populates="offers")
     ars = relationship(Ars, back_populates="offers")
 
+    def __str__(self):
+        return f"{self.request}/{self.ars}"
+
 
 class Occupation(DeclarativeBase):  # type: ignore[valid-type, misc]
     __tablename__ = "occupation"
@@ -166,3 +193,6 @@ class Occupation(DeclarativeBase):  # type: ignore[valid-type, misc]
 
     ars = relationship(Ars, back_populates="occupations")
     request = relationship(Request, back_populates="occupations")
+
+    def __str__(self):
+        return f"{self.ars}/{self.request}/{self.time}"
