@@ -122,11 +122,9 @@ class ArsModelView(CommonModelView):
 
 class RegistrationModelView(CommonModelView):
     column_sortable_list = [
-        'id',
         'phone',
     ]
     column_searchable_list = [
-        'id',
         'phone',
     ]
 
