@@ -53,7 +53,7 @@ def start_contact(user_id, state_args, handler_arg):
                 is_diller = True
         session.get(User, user_id).phone = handler_arg
         session.commit()
-    return DILLER_ID if is_diller else CLIENT_ID
+    return DILLER_ID if is_diller else CHANGE_GEO_ID
 
 
 CLIENT_ID = "client"
@@ -515,13 +515,21 @@ def client_request_show(user_id, state_args):
         spec_title = request.spec.title
         for offer in request.offers:
             ars = offer.ars
-            offers_list.append({
-                "ars_id": offer.ars_id,
-                "cost_floor": offer.cost_floor,
-                "cost_ceil": offer.cost_ceil,
-                "latitude": ars.latitude,
-                "longitude": ars.longitude,
-            })
+            ars_id = ars.id
+            offers_list.append(
+                {
+                    "ars_id": ars_id,
+                    "cost_floor": offer.cost_floor,
+                    "cost_ceil": offer.cost_ceil,
+                    "latitude": ars.latitude,
+                    "longitude": ars.longitude,
+                    "time": session.execute(
+                        select(Occupation)
+                        .where(Occupation.ars_id == ars_id)
+                        .where(Occupation.request_id == request_id)
+                    ).scalars().first().time,
+                }
+            )
         auto = request.auto
         vendor_title = auto.vendor.title
         year = auto.year
@@ -530,13 +538,15 @@ def client_request_show(user_id, state_args):
         latitude = auto.latitude
         longitude = auto.longitude
     render_offers = []
-    for offer_dict in offers_list:
+    for index, offer_dict in enumerate(offers_list):
         cost_ceil = offer_dict["cost_ceil"]
         render_offers.append([
             {
                 "text":
+                f"Пропозиція {index + 1}. Приблизна вартість " +
                 str(offer_dict["cost_floor"]) +
                 (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
+                f" грн.\nЧас ремонту - {time.isoformat()}." +
                 (" " + str(
                     ceil(
                         distance((latitude, longitude),
@@ -1299,6 +1309,8 @@ def create_offer_description_text(user_id, state_args, handler_arg):
                   cost_ceil=cost_ceil,
                   description=handler_arg))
         session.commit()
+    state_args["_status"] = "Ваша пропозиція відправлена клієнту. Очікуйте " +\
+        "на підтвердження"
     return DILLER_REQUESTS_ID
 
 
