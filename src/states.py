@@ -68,6 +68,10 @@ def client_show(user_id, state_args):
             year = auto.year
             fuel = auto.fuel
             volume = auto.volume
+    render_button_change_geo = {
+        "text": "📍 Змінити геопозицію",
+        "callback": CHANGE_GEO_ID,
+    }
     render_button_change_auto_vendor = {
         "text": "🚗 Змінити авто",
         "callback": CHANGE_AUTO_VENDOR_ID,
@@ -84,32 +88,67 @@ def client_show(user_id, state_args):
          FUEL_TEXT_MAP[fuel] if vendor_title is not None else ""),
         "keyboard": [
             [
+                render_button_change_geo,
                 render_button_change_auto_vendor,
+            ],
+            [
                 {
                     "text": "📝 Нова заявка",
                     "callback": CREATE_REQUEST_SPEC_ID,
                 },
-            ],
-            [
                 {
                     "text": "📄 Заявки у роботі",
                     "callback": CLIENT_REQUESTS_ID,
                 },
+            ],
+            [
                 {
                     "text": "📒 Акцепти",
                     "callback": CLIENT_WINS_ID,
                 },
-            ],
-            [
                 render_button_support,
             ],
         ] if vendor_title is not None else [
             [
+                render_button_change_geo,
                 render_button_change_auto_vendor,
+            ],
+            [
                 render_button_support,
             ],
         ],
     }
+
+
+CHANGE_GEO_ID = "change_geo"
+
+
+def change_geo_show(user_id, state_args):
+    return {
+        "text":
+        "Геопозиція",
+        "keyboard": [
+            [
+                {
+                    "text": "❌ Відмінити",
+                    "callback": CLIENT_ID,
+                },
+            ],
+        ],
+        "geo": {
+            "text": "Геопозиція",
+            "button": "📍 Геопозиція",
+        },
+    }
+
+
+def change_geo_geo(user_id, state_args, handler_arg):
+    with Session(engine["value"]) as session:
+        auto = session.get(User, user_id).auto
+        auto.latitude = handler_arg["latitude"]
+        auto.longitude = handler_arg["longitude"]
+        session.commit()
+    return CLIENT_ID
 
 
 CHANGE_AUTO_VENDOR_ID = "change_auto_vendor"
@@ -488,11 +527,8 @@ def client_request_show(user_id, state_args):
         year = auto.year
         fuel = auto.fuel
         volume = auto.volume
-    latitude = None
-    if "geo" in state_args:
-        geo = state_args["geo"]
-        latitude = float(geo["latitude"])
-        longitude = float(geo["longitude"])
+        latitude = auto.latitude
+        longitude = auto.longitude
     render_offers = []
     for offer_dict in offers_list:
         cost_ceil = offer_dict["cost_ceil"]
@@ -533,16 +569,10 @@ def client_request_show(user_id, state_args):
                 },
             ],
         ] + render_offers,
-        "geo": {
-            "text": "Геопозиція",
-            "button": "📍 Геопозиція",
-        },
     }
 
 
 def client_request_callback(user_id, state_args, state_id, handler_arg):
-    if "geo" in state_args:
-        del state_args["geo"]
     request_id = state_args["id"]
     del state_args["id"]
     if state_id == CLIENT_OFFER_ID:
@@ -552,14 +582,6 @@ def client_request_callback(user_id, state_args, state_id, handler_arg):
         with Session(engine["value"]) as session:
             session.get(Request, request_id).active = False
             session.commit()
-
-
-def client_request_geo(user_id, state_args, handler_arg):
-    state_args["geo"] = {
-        "latitude": str(handler_arg["latitude"]),
-        "longitude": str(handler_arg["longitude"]),
-    }
-    return CLIENT_REQUEST_ID
 
 
 CLIENT_OFFER_ID = "client_offer"

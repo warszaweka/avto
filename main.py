@@ -78,6 +78,7 @@ def tg_handler(data):
         elif "location" in data_message:
             update_type = "geo"
             data_message_location = data_message["location"]
+            print(type(data_message_location["latitude"]))  # DEBUG
             handler_arg = {
                 "latitude": data_message_location["latitude"],
                 "longitude": data_message_location["longitude"],

@@ -100,6 +100,8 @@ class Auto(DeclarativeBase):  # type: ignore[valid-type, misc]
                   ENUM(*FUEL_TEXT_MAP.keys(), name="fuel"),
                   nullable=False)
     volume = Column(NUMERIC, nullable=False)
+    latitude = Column(NUMERIC)
+    longitude = Column(NUMERIC)
     user_id = Column(BIGINT, ForeignKey(User.id), nullable=False, unique=True)
 
     vendor = relationship(Vendor, back_populates="autos")
