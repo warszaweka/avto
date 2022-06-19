@@ -815,6 +815,9 @@ def client_win_show(user_id, state_args):
     }
     if picture is not None:
         render_message["photo"] = picture
+    else:
+        render_message["photo"] = "AgACAgIAAxkBAAIBS2KvLY1b_0Q9EG1OhZkHC1ji" +\
+            "cx9FAAL30jEbpjl4SbrXm89di_NIAQADAgADcwADJAQ"
     return render_message
 
 
