@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 from math import ceil
+from typing import Dict, Optional
 
 from fuzzywuzzy import process
 from geopy.distance import distance
@@ -14,6 +15,25 @@ from .models import (ARS_TITLE_LENGTH, DESCRIPTION_LENGTH, FUEL_TEXT_MAP, Auto,
 engine = {
     "value": None,
 }
+
+operator: Dict[str, Optional[int]] = {
+    "value": None,
+}
+
+LOCALE = [
+    'січня',
+    'лютого',
+    'березня',
+    'квітня',
+    'травня',
+    'червня',
+    'липня',
+    'серпня',
+    'вересня',
+    'жовтня',
+    'листопада',
+    'грудня',
+]
 
 START_ID = "start"
 
@@ -617,8 +637,9 @@ def client_offer_show(user_id, state_args):
         "text":
         f"Пропозиція від СТО:\nПриблизна вартість робіт {str(cost_floor)}" +
         (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
-        f" грн.\nЗапланований час візиту - " +
-        occupation_time.strftime("%d-%m %H:00") +
+        " грн.\nЗапланований час візиту - " +
+        f"{str(occupation_time.day)} {LOCALE[occupation_time.month - 1]}" +
+        f" {occupation_time.strftime('%H')}:00" +
         f"\nКоментар: {description}",
         "keyboard": [
             [
@@ -704,7 +725,6 @@ def client_win_show(user_id, state_args):
     request_id = state_args["id"]
     with Session(engine["value"]) as session:
         request = session.get(Request, request_id)
-        spec_title = request.spec.title
         for offer in request.offers:
             if offer.winner:
                 cost_floor = offer.cost_floor
@@ -727,11 +747,13 @@ def client_win_show(user_id, state_args):
     render_message = {
         "text":
         f"Ви прийняли пропозицію від {title}.\n{ars_description}" +
-        f"\nМи чекаємо вас {occupation_time.strftime('%d-%m о %H:00')}" +
+        "\nМи чекаємо вас " +
+        f"{occupation_time.day} {LOCALE[occupation_time.month - 1]}" +
+        f" о {occupation_time.strftime('%H')}:00" +
         f" за адресою:\n{address}\nТел. {phone}" +
         f"\nПриблизна вартість робіт складе {str(cost_floor)}" +
         (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
-        f"\nКоментар: {description}",
+        f" грн.\nКоментар: {description}",
         "keyboard": [
             [
                 {
@@ -741,7 +763,7 @@ def client_win_show(user_id, state_args):
             ],
             [
                 {
-                    "text": "📍 Місцезнаходження",
+                    "text": "📍 Місцезнаходження СТО на мапі",
                     "url": "https://www.google.com/maps/place/" +
                     f"{latitude},{longitude}",
                 },
@@ -1382,24 +1404,35 @@ DILLER_WINNER_ID = "diller_winner"
 def diller_winner_show(user_id, state_args):
     request_id = state_args["request_id"]
     with Session(engine["value"]) as session:
+        ars_id = session.get(User, user_id).ars.id
         offer = session.get(
             Offer, {
                 "request_id": request_id,
-                "ars_id": session.get(User, user_id).ars.id,
+                "ars_id": ars_id,
             })
-        cost_floor = offer.cost_floor
-        cost_ceil = offer.cost_ceil
         description = offer.description
         request = offer.request
         spec_title = request.spec.title
         auto = request.auto
+        vendor_title = auto.vendor.title
+        volume = auto.volume
         year = auto.year
         fuel = auto.fuel
+        occupation_time = session.execute(
+            select(Occupation)
+            .where(Occupation.ars_id == ars_id)
+            .where(Occupation.request_id == request_id)
+        ).scalars().first().time
+        phone = auto.user.phone
     return {
         "text":
-        f"Акцепт\n\n{str(cost_floor)}" +
-        (f"-{str(cost_ceil)}" if cost_ceil is not None else "") +
-        f"\n{description}\n{spec_title}\n{year}\n{FUEL_TEXT_MAP[fuel]}",
+        f"Ваша пропозиція:\nТип ремонту - {spec_title}\n" +
+        f"Авто - {vendor_title} {year} р., {volume} {FUEL_TEXT_MAP[fuel]}\n" +
+        f"Коментар: {description}\nбула прийнята клієнтом: {phone}\n" +
+        "Час візиту: " +
+        f"{occupation_time.day} {LOCALE[occupation_time.month - 1]}" +
+        f" о {occupation_time.strftime('%H')}:00" +
+        "\n Вдалого дня!",
         "keyboard": [
             [
                 {

@@ -24,7 +24,7 @@ from src import states  # noqa: E402
 from src.admin import setup_admin  # noqa: E402
 from src.models import Callback, DeclarativeBase, User  # noqa: E402
 from src.states import START_ID  # noqa: E402
-from src.states import engine as states_engine  # noqa: E402
+from src.states import engine as states_engine, operator  # noqa: E402
 
 WP_ID = "AgACAgIAAxkBAAMCYhD0ezPu0APUdAJfDAhP491UCPcAAnS9MRvcWYhInPNDOCEatD" +\
     "oBAAMCAAN4AAMjBA"
@@ -37,6 +37,8 @@ states_engine["value"] = engine
 
 tg_token = getenv("TG_TOKEN")
 
+operator["value"] = int(getenv("OPERATOR", ""))
+
 tg_semaphores: Dict = {}
 dict_semaphore = BoundedSemaphore()
 
@@ -48,6 +50,33 @@ def tg_request(method, data):
           file=stderr)
     if response["ok"]:
         return response["result"]
+
+
+def notify(user_ids, text):
+    with Session(engine) as session:
+        tg_ids_list = [
+            user.tg_id
+            for user in session.execute(
+                select(User).where(User.id.in_(user_ids))
+            ).scalars().all()
+        ]
+    for tg_id in tg_ids_list:
+        tg_request(
+            "sendMessage", {
+                "chat_id": tg_id,
+                "text": text,
+                "reply_markup": {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "❌ Закрити",
+                                "callback_data": "!",
+                            },
+                        ],
+                    ],
+                },
+            }
+        )
 
 
 def tg_handler(data):
@@ -64,29 +93,37 @@ def tg_handler(data):
             if data_message_text == "/start":
                 update_type = "start"
             else:
-                update_type = "text"
                 handler_arg = data_message_text
+                update_type = "text"
         elif "photo" in data_message:
-            update_type = "photo"
             handler_arg = data_message["photo"][0]["file_id"]
+            update_type = "photo"
         elif "contact" in data_message:
             data_message_contact = data_message["contact"]
             if data_message_contact["user_id"] == tg_id:
-                update_type = "contact"
                 handler_arg = contact_re.sub(
                     "", data_message_contact["phone_number"])
+                update_type = "contact"
         elif "location" in data_message:
-            update_type = "geo"
             data_message_location = data_message["location"]
             handler_arg = {
                 "latitude": data_message_location["latitude"],
                 "longitude": data_message_location["longitude"],
             }
+            update_type = "geo"
     elif "callback_query" in data:
         data_callback_query = data["callback_query"]
         tg_id = data_callback_query["from"]["id"]
-        update_type = "callback"
         handler_arg = data_callback_query["data"]
+
+        if handler_arg == "!":
+            tg_request("deleteMessage", {
+                "chat_id": tg_id,
+                "message_id": data_callback_query["message"]["message_id"],
+            })
+            return
+
+        update_type = "callback"
 
     if update_type is not None:
         dict_semaphore.acquire()
@@ -109,6 +146,7 @@ def tg_handler(data):
         with Session(engine) as session:
             user = session.execute(
                 select(User).where(User.tg_id == tg_id)).scalars().first()
+            print(type(user.id))  # DEBUG
             if user is not None:
                 user_id = user.id
                 tg_message_id = user.tg_message_id
