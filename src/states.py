@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 from math import ceil
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
 
 from fuzzywuzzy import process
 from geopy.distance import distance
@@ -17,6 +17,10 @@ engine = {
 }
 
 operator: Dict[str, Optional[int]] = {
+    "value": None,
+}
+
+notify: Dict[str, Optional[Callable]] = {
     "value": None,
 }
 
@@ -598,12 +602,37 @@ def client_request_show(user_id, state_args):
                     },
                 },
             ],
+            [
+                {
+                    "text": "📞 Прискорити заявку",
+                    "callback": CLIENT_REQUEST_ID,
+                },
+            ],
         ] + render_offers,
     }
 
 
 def client_request_callback(user_id, state_args, state_id, handler_arg):
     request_id = state_args["id"]
+    if state_id == CLIENT_REQUEST_ID:
+        with Session(engine["value"]) as session:
+            request = session.get(Request, request_id)
+            description = request.description
+            spec_title = request.spec.title
+            auto = request.auto
+            vendor_title = auto.vendor.title
+            year = auto.year
+            fuel = auto.fuel
+            volume = auto.volume
+            phone = auto.user.phone
+        notify["value"](
+            [operator["value"]],
+            f"Тел. {phone}\n" +
+            f"Авто: {vendor_title}, {str(year)}, {str(volume)}, " +
+            f"{FUEL_TEXT_MAP[fuel]}.\nНадіслано заявку на наступні послуги " +
+            f"ремонту: {spec_title}.\nКоментар: {description}.",
+        )
+        return
     del state_args["id"]
     if state_id == CLIENT_OFFER_ID:
         state_args["request_id"] = request_id

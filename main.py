@@ -24,7 +24,9 @@ from src import states  # noqa: E402
 from src.admin import setup_admin  # noqa: E402
 from src.models import Callback, DeclarativeBase, User  # noqa: E402
 from src.states import START_ID  # noqa: E402
-from src.states import engine as states_engine, operator  # noqa: E402
+from src.states import (  # noqa: E402
+    engine as states_engine, operator, notify as states_notify
+)
 
 WP_ID = "AgACAgIAAxkBAAMCYhD0ezPu0APUdAJfDAhP491UCPcAAnS9MRvcWYhInPNDOCEatD" +\
     "oBAAMCAAN4AAMjBA"
@@ -41,15 +43,6 @@ operator["value"] = int(getenv("OPERATOR", ""))
 
 tg_semaphores: Dict = {}
 dict_semaphore = BoundedSemaphore()
-
-
-def tg_request(method, data):
-    response = post(url=f"https://api.telegram.org/bot{tg_token}/{method}",
-                    json=data).json()
-    print(f"REQUEST/RESPONSE: {method} {str(data)} {str(response)}",
-          file=stderr)
-    if response["ok"]:
-        return response["result"]
 
 
 def notify(user_ids, text):
@@ -77,6 +70,18 @@ def notify(user_ids, text):
                 },
             }
         )
+
+
+states_notify["value"] = notify
+
+
+def tg_request(method, data):
+    response = post(url=f"https://api.telegram.org/bot{tg_token}/{method}",
+                    json=data).json()
+    print(f"REQUEST/RESPONSE: {method} {str(data)} {str(response)}",
+          file=stderr)
+    if response["ok"]:
+        return response["result"]
 
 
 def tg_handler(data):
@@ -146,7 +151,6 @@ def tg_handler(data):
         with Session(engine) as session:
             user = session.execute(
                 select(User).where(User.tg_id == tg_id)).scalars().first()
-            print(type(user.id))  # DEBUG
             if user is not None:
                 user_id = user.id
                 tg_message_id = user.tg_message_id
