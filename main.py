@@ -159,7 +159,8 @@ def tg_handler(data):
                 callbacks_list = [callback.data for callback in user.callbacks]
 
         if update_type == "start" or user_id is not None:
-            status = None
+            status_text = None
+            status_photo = None
 
             if update_type == "start":
                 if user_id is not None:
@@ -220,6 +221,13 @@ def tg_handler(data):
                     if "_status" in state_args:
                         status = state_args["_status"]
                         del state_args["_status"]
+                        if isinstance(status, str):
+                            status_text = status
+                        else:
+                            if "text" in status:
+                                status_text = status["text"]
+                            if "photo" in status:
+                                status_photo = status["photo"]
                     with Session(engine) as session:
                         user = session.get(User, user_id)
                         user.state_id = state_id
@@ -239,10 +247,13 @@ def tg_handler(data):
                         "type":
                         "photo",
                         "media":
+                        status_photo
+                        if status_photo is not None else
                         render_message["photo"]
-                        if "photo" in render_message else WP_ID,
+                        if "photo" in render_message else
+                        WP_ID,
                         "caption":
-                        (f"{status}\n\n" if status is not None else "") +
+                        (f"{status}\n\n" if status_text is not None else "") +
                         (render_message["text"]
                          if "text" in render_message else ""),
                     },

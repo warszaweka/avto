@@ -45,6 +45,8 @@ START_ID = "start"
 def start_show(user_id, state_args):
     return {
         "text": "Старт",
+        "photo": "AgACAgIAAxkBAAIBRWKvK3vDrKgrYBr2ZElsIBkpul1HAAL70jEbpjl4S" +
+        "Ui-aROt2X6AAQADAgADcwADJAQ",
         "contact": {
             "text": "Номер",
             "button": "📱 Номер",
@@ -110,6 +112,8 @@ def client_show(user_id, state_args):
         "ль вже поданих відбувається звідси." +
         (f"\nВаше авто:\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
          FUEL_TEXT_MAP[fuel] if vendor_title is not None else ""),
+        "photo": "AgACAgIAAxkBAAIBRGKvKzQH6NQBeFvrhqbK6RD7pbWmAAL50jEbpjl4ST" +
+        "p26q5jfzVQAQADAgADcwADJAQ",
         "keyboard": [
             [
                 render_button_change_geo,
@@ -151,6 +155,8 @@ def change_geo_show(user_id, state_args):
     return {
         "text":
         "Геопозиція",
+        "photo": "AgACAgIAAxkBAAIBQ2KvKwwjUZ_csZwezJI5Lj5KynUdAAL40jEbpjl4SY" +
+        "fi72E4zOlJAQADAgADcwADJAQ",
         "keyboard": [
             [
                 {
@@ -419,6 +425,8 @@ def create_request_spec_show(user_id, state_args):
         "text":
         "Вкажіть, які послуги СТО вам необхідні та рухаємося далі. Якщо є су" +
         "мніви, у наступному вікні ви зможете описати технічну проблему.",
+        "photo": "AgACAgIAAxkBAAIBSGKvLEACs2gKXdnIQmStvfkQUpscAAID0zEbpjl4SR" +
+        "0Masg2uDhVAQADAgADcwADJAQ",
         "keyboard": [
             [
                 {
@@ -482,6 +490,10 @@ def create_request_description_text(user_id, state_args, handler_arg):
         session.commit()
         request_id = request.id
     state_args["id"] = request_id
+    state_args["_status"] = {
+        "photo": "AgACAgIAAxkBAAIBQGKvKZDidLQ99zjfv51ieFED6YF6AALv0jEbpjl4SU" +
+        "lWR0KqS4BQAQADAgADcwADJAQ",
+    }
     return CLIENT_REQUEST_ID
 
 
@@ -588,6 +600,8 @@ def client_request_show(user_id, state_args):
         f"Ваше авто: {vendor_title}, {str(year)}, {str(volume)}, " +
         f"{FUEL_TEXT_MAP[fuel]}.\nНадіслано заявку на наступні послуги ремон" +
         f"ту: {spec_title}.\nКоментар: {description}.",
+        "photo": "AgACAgIAAxkBAAIBRmKvK8qVo8VcRI3gsjJ8lY4RvaOxAAL_0jEbpjl4SW" +
+        "99CVMW-s4mAQADAgADcwADJAQ",
         "keyboard": [
             [
                 {
@@ -972,6 +986,8 @@ def change_ars_specs_show(user_id, state_args):
     return {
         "text":
         "Виберіть спеціалізацію\n\n" + " ".join(spec_titles_list),
+        "photo": "AgACAgIAAxkBAAIBR2KvK_OdiUJJj8ub-bPu_2ESZiHNAAPTMRumOXhJPX" +
+        "vMEWuqEaUBAAMCAANzAAMkBA",
         "keyboard": [
             [
                 {
@@ -1268,6 +1284,8 @@ def create_offer_cost_show(user_id, state_args):
         "Введіть ціну або ціновий діапазон" +
         f"\n{vendor_title}, {str(volume)} л., {str(year)} г., " +
         FUEL_TEXT_MAP[fuel],
+        "photo": "AgACAgIAAxkBAAIBQWKvKnaRU1eNH8F5DZh1uB-SplKAAAL10jEbpjl4SS" +
+        "Qt8ds2MV4QAQADAgADcwADJAQ",
         "keyboard": [
             [
                 {
